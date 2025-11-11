@@ -110,35 +110,81 @@ async function handleCreateActivity(event) {
         alert('เกิดข้อผิดพลาดในการประมวลผลวันที่/เวลา');
     }
 }
+// ฟังก์ชันดึงข้อมูลสาขาทั้งหมดจาก Supabase
+async function fetchAllMajors() {
+    console.log('Fetching all majors...');
+
+    const { data: majors, error } = await supabaseClient
+        .from('major')
+        .select('id, name, level');
+
+    if (error) {
+        console.error('Error fetching majors:', error.message);
+        alert('ไม่สามารถโหลดข้อมูลสาขาได้');
+        return [];
+    }
+
+    console.log(`Loaded majors: ${majors.length} items`);
+    return majors;
+}
+
+// ฟังก์ชันกรองและอัปเดตรายการสาขาตามระดับที่เลือก
+function updateDepartmentOptions(selectedLevel, majors) {
+    const departmentSelect = document.getElementById('department');
+    departmentSelect.innerHTML = '<option value="">เลือกสาขา</option>';
+
+    // กรอง major ตามระดับที่เลือก
+    let filteredMajors = majors.filter(m => m.level === selectedLevel);
+
+    // ถ้าไม่พบสาขาที่ตรงกับระดับ ให้แสดงทั้งหมดแทน
+    if (filteredMajors.length === 0) {
+        filteredMajors = majors; // ใช้ major ทั้งหมด
+    }
+
+    filteredMajors.forEach(m => {
+        const option = document.createElement('option');
+        option.value = m.id;
+        option.textContent = m.name;
+        departmentSelect.appendChild(option);
+    });
+}
 
 
 // -------------------------------------------------------------
 // *DOM Content Loaded Event Listener (เรียกใช้ Flatpickr ที่นี่)*
 // -------------------------------------------------------------
-document.addEventListener('DOMContentLoaded', () => {
-    // 1. เรียกใช้ฟังก์ชันดึงข้อมูลสาขา
-    fetchDepartments();
+document.addEventListener('DOMContentLoaded', async () => {
+    // 1. โหลดข้อมูล major ทั้งหมดไว้ในหน่วยความจำ
+    const allMajors = await fetchAllMajors();
 
-    // 2. ตั้งค่า Flatpickr สำหรับวันที่ (ภาษาไทย/พ.ศ.)
+    // 2. ผูก event กับ dropdown ของระดับ
+    const levelSelect = document.getElementById('level');
+    if (levelSelect) {
+        levelSelect.addEventListener('change', () => {
+            const selectedLevel = levelSelect.value;
+            updateDepartmentOptions(selectedLevel, allMajors);
+        });
+    }
+
+    // 3. เรียก Flatpickr
     flatpickr(".flatpickr-thai", {
-        locale: "th", // ใช้ภาษาไทย
-        dateFormat: "Y-m-d", // รูปแบบข้อมูลที่ส่งค่าให้ Form (ค.ศ. สำหรับ JS)
+        locale: "th",
+        dateFormat: "Y-m-d",
         altInput: true,
-        altFormat: "d F Y", // รูปแบบที่แสดงผลให้ผู้ใช้ (พ.ศ.)
+        altFormat: "d F Y",
     });
 
-    // 3. การตั้งค่า Flatpickr สำหรับเวลา 24 ชั่วโมง
     flatpickr(".flatpickr-time", {
         enableTime: true,
         noCalendar: true,
         time_24hr: true,
-        dateFormat: "H:i", // รูปแบบข้อมูลที่ส่งไป (HH:MM)
-        altInput: true, // เปิดใช้งาน alt input
-        altFormat: "H:i น.", // รูปแบบการแสดงผล (HH:MM น.)
+        dateFormat: "H:i",
+        altInput: true,
+        altFormat: "H:i น.",
         minuteIncrement: 1,
     });
 
-    // 4. แนบ Event Listener ให้กับฟอร์ม
+    // 4. ฟอร์มสร้างกิจกรรม
     const form = document.getElementById('createActivityForm');
     if (form) {
         form.addEventListener('submit', handleCreateActivity);
