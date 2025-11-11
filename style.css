@@ -1,0 +1,134 @@
+/* ตั้งค่าพื้นฐาน */
+body {
+    margin: 0;
+    font-family: Tahoma, sans-serif;
+    background-color: #f4f4f4;
+}
+
+/* Header (แถบด้านบนสีส้ม) */
+.header {
+    background-color: #d9534f; /* สีส้มอมแดง */
+    color: white;
+    padding: 10px 20px;
+    height: 60px; /* กำหนดความสูงเพื่อให้ logo อยู่ในระดับเดียวกับ sidebar */
+    box-sizing: border-box;
+}
+
+.logo-area {
+    font-size: 24px;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+}
+
+.logo {
+    width: 40px;
+    height: 40px;
+    margin-right: 10px;
+    border-radius: 50%;
+    /* คุณควรเปลี่ยน URL รูปภาพตรงนี้ให้เป็นโลโก้จริง */
+}
+
+/* โครงสร้างหลัก (Sidebar + Content) */
+.main-container {
+    display: flex;
+    min-height: calc(100vh - 60px); /* ความสูงเต็มจอ ลบด้วยความสูง Header */
+}
+
+/* Sidebar (แถบเมนูด้านซ้ายสีดำ) */
+.sidebar {
+    width: 200px;
+    background-color: #333; /* สีดำ/เทาเข้ม */
+    color: white;
+    padding-top: 20px;
+    flex-shrink: 0;
+}
+
+.sidebar a {
+    display: block;
+    color: #ccc;
+    padding: 15px 20px;
+    text-decoration: none;
+    border-left: 5px solid transparent;
+    transition: all 0.2s;
+}
+
+.sidebar a:hover {
+    color: white;
+    background-color: #444;
+}
+
+.sidebar a.active {
+    color: white;
+    background-color: #444;
+    border-left-color: #d9534f; /* แถบสีส้มด้านซ้าย */
+}
+
+.sidebar a i {
+    margin-right: 10px;
+    width: 20px; /* จัดให้ไอคอนจัดเรียงตรงกัน */
+}
+
+/* Content (พื้นที่เนื้อหาหลัก) */
+.content {
+    flex-grow: 1;
+    padding: 40px;
+    background-color: white;
+}
+
+/* ส่วนแสดงเวลา */
+.time-display {
+    text-align: center;
+    font-size: 18px;
+    color: #666;
+    margin-bottom: 40px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid #eee;
+}
+
+/* Function Grid (บล็อกฟังก์ชัน) */
+.function-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr); /* 3 คอลัมน์ */
+    gap: 30px;
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+/* Function Block (บล็อกกิจกรรมแต่ละอัน) */
+.function-block {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 180px;
+    text-align: center;
+    color: white;
+    font-size: 20px;
+    font-weight: bold;
+    border-radius: 8px;
+    text-decoration: none;
+    transition: transform 0.2s, box-shadow 0.2s;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.function-block:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+}
+
+.function-block i {
+    font-size: 60px;
+    margin-bottom: 15px;
+}
+
+/* กำหนดสีตามภาพตัวอย่าง */
+.function-block.blue { background-color: #5cb85c; }   /* ตรวจสอบกิจกรรม (เปลี่ยนสีเขียวเดิมเป็นสีฟ้าตามภาพ) */
+.function-block.red { background-color: #d9534f; }    /* แก้ไข / ลบกิจกรรม */
+.function-block.green { background-color: #5cb85c; }  /* ตรวจสอบกิจกรรม (ใช้สีเขียวตามภาพ) */
+.function-block.orange { background-color: #f0ad4e; } /* ข้อมูลแผนก */
+.function-block.purple { background-color: #673ab7; } /* สรุปผลเทอม */
+
+/* แก้ไขสีของบล็อกให้ตรงกับภาพมากที่สุด */
+.function-grid .blue { background-color: #337ab7; } /* สร้างกิจกรรม - สีฟ้า */
+.function-grid .green { background-color: #5cb85c; } /* ตรวจสอบกิจกรรม - สีเขียว */

@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>สร้างกิจกรรม - PBNTC Activity System</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+    <style>
+        /* เพิ่ม CSS เฉพาะสำหรับหน้านี้ ถ้าจำเป็น แต่ส่วนใหญ่จะใช้ style.css เดิม */
+        .form-row {
+            display: flex;
+            align-items: center;
+            margin-bottom: 25px;
+            gap: 20px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            min-width: 250px;
+        }
+
+        .form-group label {
+            font-size: 16px;
+            font-weight: bold;
+            margin-bottom: 5px;
+            color: #333;
+        }
+
+        .form-group input, .form-group select {
+            padding: 10px 12px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 16px;
+            box-sizing: border-box;
+            width: 100%;
+        }
+
+        .required::before {
+            content: '*';
+            color: #d9534f; /* สีแดงสำหรับเครื่องหมายดอกจัน */
+            margin-right: 5px;
+        }
+        
+        /* จัดกลุ่ม input เวลาให้อยู่ในบรรทัดเดียวกัน */
+        .time-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .time-group input {
+            flex: 1;
+        }
+
+        /* ปุ่ม Calendar และ Checkmark */
+        .input-icon-group {
+            position: relative;
+            width: 100%;
+        }
+
+        .input-icon-group input {
+            padding-right: 35px; /* เว้นที่ว่างสำหรับไอคอน */
+        }
+
+        .input-icon-group i {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #777;
+            pointer-events: none; /* เพื่อไม่ให้ไอคอนบังการคลิกที่ input */
+        }
+        
+        .create-button {
+            background-color: #5bc0de; /* สีฟ้า */
+            color: white;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 4px;
+            font-size: 18px;
+            cursor: pointer;
+            margin-top: 20px;
+            width: 200px; /* ทำให้ปุ่มมีขนาดกะทัดรัด */
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .create-button:hover {
+            background-color: #46b8da;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="logo-area">
+            <img src="https://example.com/pbntc-logo.png" alt="PBNTC Logo" class="logo">
+            PBNTC
+        </div>
+    </div>
+    
+    <div class="main-container">
+        <div class="sidebar">
+            <nav>
+                <a href="#"><i class="fas fa-home"></i> หน้าหลัก</a>
+                <a href="#" class="active"><i class="fas fa-edit"></i> สร้างกิจกรรม</a>
+                <a href="#"><i class="fas fa-list-alt"></i> แก้ไข / ลบกิจกรรม</a>
+                <a href="#"><i class="fas fa-clipboard-check"></i> ตรวจสอบกิจกรรม</a>
+                <a href="#"><i class="fas fa-building"></i> ข้อมูลแผนก</a>
+                <a href="#"><i class="fas fa-poll"></i> สรุปผลเทอม</a>
+                <a href="#" class="logout"><i class="fas fa-sign-out-alt"></i> ลงชื่อเข้าใช้ออก</a>
+            </nav>
+        </div>
+
+        <div class="content">
+            <h2 class="page-title">สร้างกิจกรรม</h2>
+            
+            <form id="createActivityForm">
+                <div class="form-row">
+                    <div class="form-group" style="width: 100%;">
+                        <label for="activityName" class="required">ชื่อสร้างกิจกรรม</label>
+                        <input type="text" id="activityName" name="activityName" required>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="activityDate" class="required">วันที่จัดกิจกรรม</label>
+                        <div class="input-icon-group">
+                            <input type="text" id="activityDate" name="activityDate" placeholder="วว/ดด/ปปปป" required>
+                            <i class="fas fa-calendar-alt"></i>
+                        </div>
+                    </div>
+
+                    <div class="form-group" style="flex: 2;">
+                        <label class="required">เวลา</label>
+                        <div class="time-group">
+                            <div class="input-icon-group">
+                                <input type="time" id="startTime" name="startTime" required>
+                                <i class="fas fa-clock"></i>
+                            </div>
+                            <span>*ถึง</span>
+                            <div class="input-icon-group">
+                                <input type="time" id="endTime" name="endTime" required>
+                                <i class="fas fa-check"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="department" class="required">แผนก</label>
+                        <div class="input-icon-group">
+                            <select id="department" name="department" required>
+                                <option value="">เลือกแผนก</option>
+                                <option value="1">ช่างยนต์</option>
+                                <option value="2">คอมพิวเตอร์ธุรกิจ</option>
+                                <option value="3">บริหารธุรกิจ</option>
+                            </select>
+                            <i class="fas fa-check"></i>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="level" class="required">ระดับ</label>
+                        <div class="input-icon-group">
+                            <select id="level" name="level" required>
+                                <option value="">เลือกระดับ</option>
+                                <option value="ปวช.">ปวช.</option>
+                                <option value="ปวส.">ปวส.</option>
+                                <option value="ปริญญาตรี">ปริญญาตรี</option>
+                            </select>
+                            <i class="fas fa-check"></i>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group" style="flex: unset; width: 300px; flex-direction: row; align-items: center;">
+                        <label for="recurringDays" style="width: 100px; font-weight: normal; margin-right: 10px;">จัดขึ้นทุกๆ</label>
+                        <input type="number" id="recurringDays" name="recurringDays" value="0" style="width: 80px;">
+                        <span style="font-weight: bold; margin-left: 10px;">วัน</span>
+                    </div>
+                </div>
+
+                <button type="submit" class="create-button">สร้างกิจกรรม</button>
+
+            </form>
+        </div>
+    </div>
+</body>
+</html>อ

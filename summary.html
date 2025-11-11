@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>สรุปผลเทอม - PBNTC</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <link rel="stylesheet" href="style.css"> 
+    
+    <style>
+        /* CSS พื้นฐานเพื่อจัดรูปแบบตารางให้ดูดีคล้ายภาพ */
+        body { font-family: Tahoma, sans-serif; background-color: #f4f4f4; }
+        .container { max-width: 1200px; margin: 50px auto; background: white; padding: 20px; border-radius: 8px; }
+        h2 { color: #d9534f; border-bottom: 2px solid #d9534f; padding-bottom: 10px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: center; }
+        th { background-color: #f2f2f2; }
+        .pass { color: green; font-weight: bold; }
+        .fail { color: red; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>สรุปผลเทอม</h2>
+        
+        <div class="filter-controls" style="margin-bottom: 20px;">
+            <input type="text" placeholder="ค้นหาชื่อนักเรียน">
+            <select><option>แผนก</option></select>
+            <select><option>ระดับ</option></select>
+        </div>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>ชื่อนักเรียน</th>
+                    <th>แผนก</th>
+                    <th>กิจกรรมทั้งหมด</th>
+                    <th>เข้าร่วมกิจกรรม</th>
+                    <th>EX กิจกรรม (%)</th>
+                    <th>ผลกิจกรรม</th>
+                </tr>
+            </thead>
+            <tbody id="scoreTableBody">
+                </tbody>
+        </table>
+    </div>
+
+    <script>
+        // *** 1. กำหนดค่าการเชื่อมต่อ Supabase (แทนที่ด้วยค่าจริงของคุณ) ***
+        const SUPABASE_URL = 'https://abcde12345.supabase.co'; 
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.***';
+
+        const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        /**
+         * 2. ฟังก์ชันดึงข้อมูลและแสดงผล
+         */
+        async function fetchAndRenderScores() {
+            const tableBody = document.getElementById('scoreTableBody');
+            tableBody.innerHTML = ''; // ล้างข้อมูลเดิม
+
+            // ดึงข้อมูลจาก term_score พร้อม Join ข้อมูล student และ department
+            const { data: scores, error } = await supabase
+                .from('term_score')
+                .select(`
+                    *,
+                    student (name, department:department_id (name)),
+                    department (name)
+                `)
+                .order('student_id', { ascending: true });
+
+            if (error) {
+                console.error('Error fetching scores:', error.message);
+                tableBody.innerHTML = '<tr><td colspan="6">เกิดข้อผิดพลาดในการดึงข้อมูล</td></tr>';
+                return;
+            }
+
+            // 3. แสดงผลข้อมูลในตาราง
+            scores.forEach(score => {
+                const studentName = score.student.name || 'N/A';
+                const departmentName = score.department.name || 'N/A';
+                
+                // คำนวณค่าตัวอย่าง (ต้องใช้ตรรกะที่ซับซ้อนกว่านี้ในระบบจริง)
+                const totalActivities = 20; 
+                const attendedActivities = Math.round(totalActivities * (score.flag_ceremony_percentage / 100)); // ใช้ flag_ceremony_percentage เป็นตัวแทน
+
+                const activityPercentage = score.flag_ceremony_percentage;
+                
+                const passStatus = score.is_passed 
+                    ? `<span class="pass">✔ ผ่าน</span>` 
+                    : `<span class="fail">❌ ไม่ผ่าน</span>`;
+
+                const row = `
+                    <tr>
+                        <td>${studentName}</td>
+                        <td>${departmentName}</td>
+                        <td>${totalActivities}</td>
+                        <td>${attendedActivities}</td>
+                        <td>${activityPercentage.toFixed(2)}%</td>
+                        <td>${passStatus}</td>
+                    </tr>
+                `;
+                tableBody.innerHTML += row;
+            });
+        }
+
+        // เรียกใช้ฟังก์ชันเมื่อหน้าเว็บโหลด
+        document.addEventListener('DOMContentLoaded', fetchAndRenderScores);
+    </script>
+</body>
+</html>
