@@ -216,11 +216,11 @@ body {
 .function-block.blue { background-color: #337ab7; } /* สร้างกิจกรรม - สีฟ้า */
 .function-block.red { background-color: #d9534f; }    /* แก้ไข / ลบกิจกรรม */
 .function-block.green { background-color: #5cb85c; }  /* ตรวจสอบกิจกรรม - สีเขียว */
-.function-block.orange { background-color: #f0ad4e; } /* ข้อมูลแผนก */
+.function-block.orange { background-color: #f0ad4e; } /* ข้อมูลสาขา */
 .function-block.purple { background-color: #673ab7; } /* สรุปผลเทอม */
 
 
-/* *** START: CSS สำหรับหน้าตาราง (สรุปผลและข้อมูลแผนก) ***
+/* *** START: CSS สำหรับหน้าตาราง (สรุปผลและข้อมูลสาขา) ***
 */
 
 .page-title { /* ใช้แทน .content-header */
@@ -301,5 +301,5 @@ body {
     white-space: nowrap;
 }
 
-/* *** END: CSS สำหรับหน้าตาราง (สรุปผลและข้อมูลแผนก) ***
+/* *** END: CSS สำหรับหน้าตาราง (สรุปผลและข้อมูลสาขา) ***
 */

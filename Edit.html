@@ -176,7 +176,7 @@ input[type="radio"]:checked + label.late-btn::after {
                 <a href="create_activity.html" class="active"><i class="fas fa-edit"></i> สร้างกิจกรรม</a>
                 <a href="edit_delete_activity.html"><i class="fas fa-list-alt"></i> แก้ไข / ลบกิจกรรม</a>
                 <a href="#"><i class="fas fa-clipboard-check"></i> ตรวจสอบกิจกรรม</a>
-                <a href="#"><i class="fas fa-building"></i> ข้อมูลแผนก</a>
+                <a href="#"><i class="fas fa-building"></i> ข้อมูลสาขา</a>
                 <a href="summary.html"><i class="fas fa-poll"></i> สรุปผลเทอม</a>
                 <a href="#" class="logout"><i class="fas fa-sign-out-alt"></i> ลงชื่อเข้าใช้ออก</a>
             </nav>
@@ -220,10 +220,10 @@ input[type="radio"]:checked + label.late-btn::after {
 
                 <div class="form-row">
                     <div class="form-group">
-                        <label for="department" class="required">แผนก</label>
+                        <label for="department" class="required">สาขา</label>
                         <div class="input-icon-group">
                             <select id="department" name="department" required>
-                                <option value="">เลือกแผนก</option>
+                                <option value="">เลือกสาขา</option>
                                 <option value="1">ไฟฟ้า</option>
                                 <option value="2">ช่างยนต์</option>
                             </select>
@@ -367,7 +367,7 @@ async function loadActivity() {
     document.getElementById('endTime').value = new Date(data.end_time).toISOString().slice(11,16)
     document.getElementById('recurringDays').value = data.is_recurring ? 1 : 0
 
-    // 3. โหลด dropdown ของแผนกทั้งหมด
+    // 3. โหลด dropdown ของสาขาทั้งหมด
     const { data: depts, error: deptError } = await supabase
         .from('department')
         .select('id, name, level')
@@ -379,7 +379,7 @@ async function loadActivity() {
     }
 
     const deptSelect = document.getElementById('department')
-    deptSelect.innerHTML = '<option value="">เลือกแผนก</option>'
+    deptSelect.innerHTML = '<option value="">เลือกสาขา</option>'
 
     depts.forEach(d => {
         const option = document.createElement('option')

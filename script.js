@@ -9,7 +9,7 @@ const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 let activityIdToDelete = null;
 
 /**
- * ฟังก์ชันดึงรายการแผนกเพื่อ populate dropdown filter
+ * ฟังก์ชันดึงรายการสาขาเพื่อ populate dropdown filter
  */
 async function fetchDepartments() {
     const filter = document.getElementById('departmentFilter');
@@ -38,7 +38,7 @@ async function fetchAndRenderActivities() {
     const container = document.getElementById('activityCardContainer');
     container.innerHTML = ''; // ล้างข้อมูลเดิม
 
-    // ดึงข้อมูลจาก activity พร้อม Join แผนก
+    // ดึงข้อมูลจาก activity พร้อม Join สาขา
     const { data: activities, error } = await supabaseClient
         .from('activity')
         .select(`
@@ -67,8 +67,8 @@ async function fetchAndRenderActivities() {
         const endTime = new Date(activity.end_time).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Bangkok' });
         const date = new Date(activity.start_time).toLocaleDateString('th-TH', { day: '2-digit', month: '2-digit', year: 'numeric' });
         
-        // ข้อมูลแผนก
-        const departmentName = activity.department?.name || 'ไม่ระบุแผนก';
+        // ข้อมูลสาขา
+        const departmentName = activity.department?.name || 'ไม่ระบุสาขา';
         const departmentLevel = activity.department?.level || 'ไม่ระบุระดับ';
         const recurringDays = activity.is_recurring ? 'N' : '0';
 
@@ -76,7 +76,7 @@ async function fetchAndRenderActivities() {
             <div class="activity-card" data-id="${activity.id}" data-name="${activity.name}" data-dept-id="${activity.department?.id}">
                 <div class="card-title">กิจกรรม ${activity.name}</div>
                 <div class="card-detail">วัน <span>${date}</span> เวลา <span>${startTime} - ${endTime}</span></div>
-                <div class="card-detail">แผนก <span>${departmentName}</span> ระดับ <span>${departmentLevel}</span></div>
+                <div class="card-detail">สาขา <span>${departmentName}</span> ระดับ <span>${departmentLevel}</span></div>
                 <div class="card-detail">จัดขึ้นทุกๆ <span>${recurringDays}</span> วัน</div>
                 
                 <div class="card-actions">
@@ -163,7 +163,7 @@ if (confirmDialog) {
 
 // โหลดข้อมูลเมื่อหน้าเว็บพร้อม
 document.addEventListener('DOMContentLoaded', () => {
-    // ดึงแผนกมาใส่ filter และดึงกิจกรรมมาแสดง
+    // ดึงสาขามาใส่ filter และดึงกิจกรรมมาแสดง
     fetchDepartments();
     fetchAndRenderActivities();
 });

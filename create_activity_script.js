@@ -17,12 +17,12 @@ async function fetchDepartments() {
     if (error) {
         console.error('Error fetching departments:', error.message);
         const departmentSelect = document.getElementById('department');
-        departmentSelect.innerHTML = '<option value="">ไม่สามารถโหลดแผนกได้</option>';
+        departmentSelect.innerHTML = '<option value="">ไม่สามารถโหลดสาขาได้</option>';
         return;
     }
 
     const departmentSelect = document.getElementById('department');
-    departmentSelect.innerHTML = '<option value="">เลือกแผนก</option>';
+    departmentSelect.innerHTML = '<option value="">เลือกสาขา</option>';
 
     if (departments) {
         departments.forEach(dept => {
@@ -116,7 +116,7 @@ async function handleCreateActivity(event) {
 // *DOM Content Loaded Event Listener (เรียกใช้ Flatpickr ที่นี่)*
 // -------------------------------------------------------------
 document.addEventListener('DOMContentLoaded', () => {
-    // 1. เรียกใช้ฟังก์ชันดึงข้อมูลแผนก
+    // 1. เรียกใช้ฟังก์ชันดึงข้อมูลสาขา
     fetchDepartments();
 
     // 2. ตั้งค่า Flatpickr สำหรับวันที่ (ภาษาไทย/พ.ศ.)
