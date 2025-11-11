@@ -9,9 +9,9 @@ const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 async function fetchDepartments() {
     console.log('Fetching departments...');
 
-    // ดึงข้อมูลทั้งหมดจากตาราง 'department'
+    // ดึงข้อมูลทั้งหมดจากตาราง 'major'
     const { data: departments, error } = await supabaseClient
-        .from('department')
+        .from('major')
         .select('id, name');
 
     if (error) {
