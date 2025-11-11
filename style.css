@@ -122,8 +122,6 @@ body {
     margin-bottom: 15px;
 }
 
-/* ... (โค้ด CSS เดิมทั้งหมดของคุณ) ... */
-
 /* --- Styles for Confirmation Dialog (Modal) --- */
 
 /* พื้นหลังมืดและกำหนดให้ Dialog อยู่ตรงกลาง */
@@ -215,12 +213,93 @@ body {
 }
 
 /* กำหนดสีตามภาพตัวอย่าง */
-.function-block.blue { background-color: #5cb85c; }   /* ตรวจสอบกิจกรรม (เปลี่ยนสีเขียวเดิมเป็นสีฟ้าตามภาพ) */
+.function-block.blue { background-color: #337ab7; } /* สร้างกิจกรรม - สีฟ้า */
 .function-block.red { background-color: #d9534f; }    /* แก้ไข / ลบกิจกรรม */
-.function-block.green { background-color: #5cb85c; }  /* ตรวจสอบกิจกรรม (ใช้สีเขียวตามภาพ) */
+.function-block.green { background-color: #5cb85c; }  /* ตรวจสอบกิจกรรม - สีเขียว */
 .function-block.orange { background-color: #f0ad4e; } /* ข้อมูลแผนก */
 .function-block.purple { background-color: #673ab7; } /* สรุปผลเทอม */
 
-/* แก้ไขสีของบล็อกให้ตรงกับภาพมากที่สุด */
-.function-grid .blue { background-color: #337ab7; } /* สร้างกิจกรรม - สีฟ้า */
-.function-grid .green { background-color: #5cb85c; } /* ตรวจสอบกิจกรรม - สีเขียว */
+
+/* *** START: CSS สำหรับหน้าตาราง (สรุปผลและข้อมูลแผนก) ***
+*/
+
+.page-title { /* ใช้แทน .content-header */
+    font-size: 26px;
+    font-weight: bold;
+    margin-bottom: 20px;
+    color: #333; /* ใช้สีเข้มมาตรฐานของธีมหลัก */
+}
+
+/* สไตล์พื้นฐานของตาราง */
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 15px;
+    text-align: left;
+}
+
+.data-table th, .data-table td {
+    padding: 10px 12px;
+    border: 1px solid #ddd;
+    font-size: 15px;
+}
+
+.data-table th {
+    background-color: #f2f2f2;
+    color: #333;
+    font-weight: 600;
+    text-align: center;
+    border-bottom: 2px solid #ccc;
+}
+
+.data-table tr:nth-child(even) {
+    background-color: #f7f7f7;
+}
+
+/* สไตล์สำหรับปุ่ม/ผลลัพธ์ในตาราง */
+.pass { color: #5cb85c; font-weight: 600; } /* เขียว */
+.fail { color: #d9534f; font-weight: 600; } /* แดง */
+.role-select { width: 120px; padding: 5px; border-radius: 4px; } /* สำหรับ Department_information.html */
+
+/* สไตล์สำหรับ Filter / Search */
+.filter-controls {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 20px;
+    align-items: center;
+}
+
+.filter-controls input[type="text"], 
+.filter-controls select {
+    padding: 8px 12px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 15px;
+    box-sizing: border-box;
+}
+
+.search-box {
+    position: relative;
+    flex: 1; /* ให้กล่องค้นหากินพื้นที่มากที่สุด */
+}
+
+.search-box input {
+    width: 100%;
+    padding-left: 35px; /* เว้นที่ให้ไอคอน */
+}
+
+.search-box i {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #777;
+}
+
+.filter-controls label {
+    font-weight: bold;
+    white-space: nowrap;
+}
+
+/* *** END: CSS สำหรับหน้าตาราง (สรุปผลและข้อมูลแผนก) ***
+*/

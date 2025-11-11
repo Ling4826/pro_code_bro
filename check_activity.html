@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ตรวจสอบกิจกรรม - PBNTC Activity System</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        /* CSS เฉพาะสำหรับหน้านี้ */
+        .controls-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 25px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .date-controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 16px;
+        }
+
+        .date-controls select, .date-controls input {
+            padding: 8px 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 16px;
+            cursor: pointer;
+            min-width: 80px;
+        }
+
+        .export-button {
+            background-color: #5bc0de; /* สีฟ้า */
+            color: white;
+            padding: 8px 15px;
+            border: none;
+            border-radius: 4px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            display: flex;
+            align-items: center;
+            text-decoration: none;
+        }
+
+        .export-button:hover {
+            background-color: #46b8da;
+        }
+
+        .export-button i {
+            margin-left: 8px;
+        }
+
+        /* ตารางแสดงผลกิจกรรม */
+        .activity-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 15px;
+        }
+
+        .activity-table th, .activity-table td {
+            border: 1px solid #ddd;
+            padding: 12px 10px;
+            text-align: left;
+        }
+
+        .activity-table th {
+            background-color: #f2f2f2;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .activity-table tr:nth-child(odd) {
+            background-color: #f9f9f9;
+        }
+
+        /* สไตล์คอลัมน์สถานะเช็กชื่อ */
+        .status-cell {
+            text-align: center;
+            font-weight: bold;
+        }
+
+        .status-cell .checked {
+            color: #5cb85c; /* เขียว */
+        }
+
+        .status-cell .partial {
+            color: #f0ad4e; /* ส้ม/เหลือง */
+        }
+
+        .status-cell .unchecked {
+            color: #d9534f; /* แดง */
+        }
+
+        .status-icon {
+            margin-right: 5px;
+            font-size: 18px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="logo-area">PBNTC</div>
+    </div>
+    
+    <div class="main-container">
+        <div class="sidebar">
+            <nav>
+                <a href="index.html"><i class="fas fa-home"></i> หน้าหลัก</a>
+                <a href="create_activity.html"><i class="fas fa-edit"></i> สร้างกิจกรรม</a>
+                <a href="edit_delete_activity.html"><i class="fas fa-list-alt"></i> แก้ไข / ลบกิจกรรม</a>
+                <a href="check_activity.html" class="active"><i class="fas fa-clipboard-check"></i> ตรวจสอบกิจกรรม</a>
+                <a href="Department_information.html"><i class="fas fa-building"></i> ข้อมูลแผนก</a>
+                <a href="summary.html"><i class="fas fa-poll"></i> สรุปผลเทอม</a>
+                <a href="#" class="logout"><i class="fas fa-sign-out-alt"></i> ลงชื่อเข้าใช้ออก</a>
+            </nav>
+        </div>
+
+        <div class="content">
+            <h2 class="page-title">ตรวจสอบกิจกรรม</h2>
+            
+            <div class="controls-row">
+                <div class="date-controls">
+                    <label for="daySelect">วันที่</label>
+                    <select id="daySelect"><option value="6">6</option><option value="7" selected>7</option></select>
+                    
+                    <label for="monthSelect">เดือน</label>
+                    <select id="monthSelect">
+                        <option value="11" selected>พฤศจิกายน</option>
+                        <option value="12">ธันวาคม</option>
+                    </select>
+
+                    <label for="yearSelect">ปี</label>
+                    <select id="yearSelect"><option value="2568" selected>2568</option></select>
+                </div>
+                
+                <a href="#" class="export-button">
+                    บันทึกเป็น Exsel
+                    <i class="fas fa-external-link-alt"></i>
+                </a>
+            </div>
+
+            <table class="activity-table">
+                <thead>
+                    <tr>
+                        <th style="width: 30%;">กิจกรรม</th>
+                        <th style="width: 15%;">เวลา</th>
+                        <th style="width: 20%;">แผนก</th>
+                        <th class="status-cell" style="width: 15%;">สถานะเช็กชื่อ</th>
+                        <th style="width: 15%;">สรุป</th>
+                        <th style="width: 5%;"><i class="fas fa-sync-alt" title="รีเฟรช"></i></th>
+                    </tr>
+                </thead>
+                <tbody id="activityCheckTableBody">
+                    <tr>
+                        <td>หน้าเสาธง</td>
+                        <td>08:00-09:00</td>
+                        <td>ทั้งโรงเรียน</td>
+                        <td class="status-cell checked"><i class="fas fa-check-circle status-icon"></i>เช็กครบ</td>
+                        <td>95% เข้าร่วม</td>
+                        <td></td>
+                    </tr>
+                    <tr>
+                        <td>กิจกรรมแผนกคอมฯ</td>
+                        <td>13:00-15:00</td>
+                        <td>คอมพิวเตอร์</td>
+                        <td class="status-cell partial"><i class="fas fa-exclamation-triangle status-icon"></i>ยังไม่ครบ</td>
+                        <td>72% เข้าร่วม</td>
+                        <td></td>
+                    </tr>
+                    <tr>
+                        <td>กิจกรรมไฟฟ้า</td>
+                        <td>09:00-11:00</td>
+                        <td>ไฟฟ้า</td>
+                        <td class="status-cell unchecked"><i class="fas fa-times-circle status-icon"></i>ยังไม่เช็ก</td>
+                        <td>—</td>
+                        <td></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    </body>
+</html>
