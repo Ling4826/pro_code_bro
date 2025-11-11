@@ -110,6 +110,7 @@ function attachCardEventListeners() {
             const card = event.target.closest('.activity-card');
             const activityId = card.dataset.id;
             alert(`กำลังนำทางไปแก้ไขกิจกรรม ID: ${activityId}`);
+            window.location.href = `Edit.html?activityId=${activityId}`;
         });
     });
 }
