@@ -122,6 +122,98 @@ body {
     margin-bottom: 15px;
 }
 
+/* ... (โค้ด CSS เดิมทั้งหมดของคุณ) ... */
+
+/* --- Styles for Confirmation Dialog (Modal) --- */
+
+/* พื้นหลังมืดและกำหนดให้ Dialog อยู่ตรงกลาง */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5); /* พื้นหลังสีดำโปร่งแสง */
+    display: flex; 
+    justify-content: center;
+    align-items: center;
+    z-index: 1000; 
+}
+
+/* ตัว Modal หลัก */
+.modal-dialog {
+    background-color: white;
+    border-radius: 4px;
+    width: 450px; 
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+    overflow: hidden;
+}
+
+/* ส่วนหัว (สีส้ม) */
+.modal-header {
+    background-color: #f0ad4e; /* สีส้ม */
+    color: white;
+    padding: 15px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 18px;
+    font-weight: bold;
+}
+
+.modal-header h3 {
+    margin: 0;
+}
+
+.modal-header .close-btn {
+    font-size: 24px;
+    cursor: pointer;
+    line-height: 1;
+}
+
+/* ส่วนเนื้อหา */
+.modal-body {
+    padding: 30px 20px;
+    text-align: center;
+    font-size: 16px;
+    color: #333;
+}
+
+.modal-body #activityToDeleteName {
+    color: #d9534f; /* เน้นชื่อกิจกรรมด้วยสีแดง */
+    font-weight: bold;
+}
+
+/* ส่วนท้าย (ปุ่ม) */
+.modal-footer {
+    padding: 15px 20px;
+    text-align: right;
+    display: flex;
+    justify-content: center; 
+    gap: 20px;
+}
+
+/* 📌 Styles สำหรับปุ่ม (จำเป็นมากเพื่อให้ปุ่มมีสี) */
+.btn {
+    padding: 10px 25px;
+    border: none;
+    border-radius: 4px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    font-weight: bold;
+}
+
+.btn-cancel {
+    background-color: #5bc0de; /* สีฟ้า */
+    color: white;
+}
+
+.btn-confirm {
+    background-color: #d9534f; /* สีแดง */
+    color: white;
+}
+
 /* กำหนดสีตามภาพตัวอย่าง */
 .function-block.blue { background-color: #5cb85c; }   /* ตรวจสอบกิจกรรม (เปลี่ยนสีเขียวเดิมเป็นสีฟ้าตามภาพ) */
 .function-block.red { background-color: #d9534f; }    /* แก้ไข / ลบกิจกรรม */

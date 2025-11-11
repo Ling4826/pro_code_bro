@@ -6,29 +6,21 @@
     <title>สร้างกิจกรรม - PBNTC Activity System</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        /* เพิ่ม CSS เฉพาะสำหรับหน้านี้ ถ้าจำเป็น แต่ส่วนใหญ่จะใช้ style.css เดิม */
+        /* CSS เฉพาะสำหรับหน้านี้ (ใช้โค้ดเดิมที่คุณสร้างไว้) */
         .form-row {
             display: flex;
             align-items: center;
             margin-bottom: 25px;
             gap: 20px;
         }
-
         .form-group {
             display: flex;
             flex-direction: column;
             flex: 1;
             min-width: 250px;
         }
-
-        .form-group label {
-            font-size: 16px;
-            font-weight: bold;
-            margin-bottom: 5px;
-            color: #333;
-        }
-
         .form-group input, .form-group select {
             padding: 10px 12px;
             border: 1px solid #ccc;
@@ -37,45 +29,18 @@
             box-sizing: border-box;
             width: 100%;
         }
-
         .required::before {
             content: '*';
-            color: #d9534f; /* สีแดงสำหรับเครื่องหมายดอกจัน */
+            color: #d9534f;
             margin-right: 5px;
         }
-        
-        /* จัดกลุ่ม input เวลาให้อยู่ในบรรทัดเดียวกัน */
         .time-group {
             display: flex;
             align-items: center;
             gap: 10px;
         }
-
-        .time-group input {
-            flex: 1;
-        }
-
-        /* ปุ่ม Calendar และ Checkmark */
-        .input-icon-group {
-            position: relative;
-            width: 100%;
-        }
-
-        .input-icon-group input {
-            padding-right: 35px; /* เว้นที่ว่างสำหรับไอคอน */
-        }
-
-        .input-icon-group i {
-            position: absolute;
-            right: 12px;
-            top: 50%;
-            transform: translateY(-50%);
-            color: #777;
-            pointer-events: none; /* เพื่อไม่ให้ไอคอนบังการคลิกที่ input */
-        }
-        
         .create-button {
-            background-color: #5bc0de; /* สีฟ้า */
+            background-color: #5bc0de;
             color: white;
             padding: 12px 30px;
             border: none;
@@ -83,12 +48,22 @@
             font-size: 18px;
             cursor: pointer;
             margin-top: 20px;
-            width: 200px; /* ทำให้ปุ่มมีขนาดกะทัดรัด */
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         }
-
-        .create-button:hover {
-            background-color: #46b8da;
+        /* เพิ่มสไตล์สำหรับไอคอนใน input */
+        .input-icon-group {
+            position: relative;
+            width: 100%;
+        }
+        .input-icon-group input {
+            padding-right: 35px;
+        }
+        .input-icon-group i {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #777;
+            pointer-events: none;
         }
     </style>
 </head>
@@ -103,19 +78,19 @@
     <div class="main-container">
         <div class="sidebar">
             <nav>
-                <a href="#"><i class="fas fa-home"></i> หน้าหลัก</a>
-                <a href="#" class="active"><i class="fas fa-edit"></i> สร้างกิจกรรม</a>
-                <a href="#"><i class="fas fa-list-alt"></i> แก้ไข / ลบกิจกรรม</a>
+                <a href="index.html"><i class="fas fa-home"></i> หน้าหลัก</a>
+                <a href="create_activity.html" class="active"><i class="fas fa-edit"></i> สร้างกิจกรรม</a>
+                <a href="edit_delete_activity.html"><i class="fas fa-list-alt"></i> แก้ไข / ลบกิจกรรม</a>
                 <a href="#"><i class="fas fa-clipboard-check"></i> ตรวจสอบกิจกรรม</a>
                 <a href="#"><i class="fas fa-building"></i> ข้อมูลแผนก</a>
-                <a href="#"><i class="fas fa-poll"></i> สรุปผลเทอม</a>
+                <a href="summary.html"><i class="fas fa-poll"></i> สรุปผลเทอม</a>
                 <a href="#" class="logout"><i class="fas fa-sign-out-alt"></i> ลงชื่อเข้าใช้ออก</a>
             </nav>
         </div>
 
         <div class="content">
             <h2 class="page-title">สร้างกิจกรรม</h2>
-            
+
             <form id="createActivityForm">
                 <div class="form-row">
                     <div class="form-group" style="width: 100%;">
@@ -155,9 +130,8 @@
                         <div class="input-icon-group">
                             <select id="department" name="department" required>
                                 <option value="">เลือกแผนก</option>
-                                <option value="1">ช่างยนต์</option>
-                                <option value="2">คอมพิวเตอร์ธุรกิจ</option>
-                                <option value="3">บริหารธุรกิจ</option>
+                                <option value="1">ไฟฟ้า</option>
+                                <option value="2">ช่างยนต์</option>
                             </select>
                             <i class="fas fa-check"></i>
                         </div>
@@ -190,5 +164,7 @@
             </form>
         </div>
     </div>
+    
+    <script src="create_activity_script.js"></script> 
 </body>
-</html>อ
+</html>
