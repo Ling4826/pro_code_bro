@@ -394,6 +394,48 @@ async function loadActivity() {
         document.getElementById('level').value = data.department.level
     }
 }
+const form = document.getElementById('createActivityForm')
+
+form.addEventListener('submit', async (e) => {
+    e.preventDefault()  // ป้องกันการ reload หน้า
+
+    // ดึงค่าจากฟอร์ม
+    const name = document.getElementById('activityName').value
+    const startTime = document.getElementById('startTime').value
+    const endTime = document.getElementById('endTime').value
+    const activityDate = document.getElementById('activityDate').value
+    const departmentId = document.getElementById('department').value
+    const level = document.getElementById('level').value
+    const recurringDays = document.getElementById('recurringDays').value
+
+    // แปลง date + time เป็น timestamp ISO
+    const [day, month, year] = activityDate.split('/')
+    const startDateTime = new Date(`${year}-${month}-${day}T${startTime}:00`).toISOString()
+    const endDateTime = new Date(`${year}-${month}-${day}T${endTime}:00`).toISOString()
+
+    // อัปเดต activity ใน Supabase
+    const { data, error } = await supabase
+        .from('activity')
+        .update({
+            name: name,
+            start_time: startDateTime,
+            end_time: endDateTime,
+            is_recurring: recurringDays > 0,
+            department_id: departmentId
+        })
+        .eq('id', activityId)
+        .select()  // เลือกข้อมูลที่อัปเดตกลับมา (optional)
+
+    if (error) {
+        alert('เกิดข้อผิดพลาด: ' + error.message)
+        console.error(error)
+    } else {
+        alert('อัปเดตกิจกรรมเรียบร้อยแล้ว!')
+        console.log('Updated activity:', data)
+        // สามารถ redirect ไปหน้ากิจกรรมทั้งหมดได้
+        // window.location.href = 'edit_delete_activity.html'
+    }
+})
 
 // เรียกเมื่อโหลดหน้า
 document.addEventListener('DOMContentLoaded', loadActivity)
