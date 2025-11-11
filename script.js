@@ -14,7 +14,7 @@ let activityIdToDelete = null;
 async function fetchDepartments() {
     const filter = document.getElementById('departmentFilter');
     const { data, error } = await supabaseClient
-        .from('department')
+        .from('major')
         .select('id, name')
         .order('name', { ascending: true });
 
@@ -47,7 +47,7 @@ async function fetchAndRenderActivities() {
             start_time,
             end_time,
             is_recurring,
-            department:department_id (name, level)
+            major:major_id (name, level)
         `)
         .order('start_time', { ascending: true });
 
