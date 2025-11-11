@@ -3,7 +3,7 @@ const SUPABASE_URL = 'https://pdqzkejlefozxquptoco.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBkcXprZWpsZWZvenhxdXB0b2NvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIzNDIyODAsImV4cCI6MjA3NzkxODI4MH0.EojnxNcGPj7eGlf7FAJOgMuEXIW54I2NQwB_L2Wj9DU';
 
 // สร้าง Supabase Client
-const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 /**
  * ฟังก์ชันหลักในการจัดการ Form Submission
@@ -61,7 +61,7 @@ async function handleCreateActivity(event) {
         };
         
         // 5. Insert ข้อมูลลงใน Supabase
-        const { data, error } = await supabase
+        const { data, error } = await supabaseClient
             .from('activity')
             .insert([activityData]);
 

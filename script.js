@@ -3,7 +3,7 @@ const SUPABASE_URL = 'https://pdqzkejlefozxquptoco.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBkcXprZWpsZWZvenhxdXB0b2NvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIzNDIyODAsImV4cCI6MjA3NzkxODI4MH0.EojnxNcGPj7eGlf7FAJOgMuEXIW54I2NQwB_L2Wj9DU';
 
 // สร้าง Supabase Client
-const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // ตัวแปรสำหรับเก็บ ID ของกิจกรรมที่กำลังจะถูกลบ
 let activityIdToDelete = null;
@@ -13,7 +13,7 @@ let activityIdToDelete = null;
  */
 async function fetchDepartments() {
     const filter = document.getElementById('departmentFilter');
-    const { data, error } = await supabase
+    const { data, error } = await supabaseClient
         .from('department')
         .select('id, name')
         .order('name', { ascending: true });
@@ -39,7 +39,7 @@ async function fetchAndRenderActivities() {
     container.innerHTML = ''; // ล้างข้อมูลเดิม
 
     // ดึงข้อมูลจาก activity พร้อม Join แผนก
-    const { data: activities, error } = await supabase
+    const { data: activities, error } = await supabaseClient
         .from('activity')
         .select(`
             id,
@@ -143,7 +143,7 @@ if (confirmDialog) {
     // Event Listener สำหรับยืนยันการลบ (โค้ดเดิม)
     confirmDeleteBtn.addEventListener('click', async () => {
         if (activityIdToDelete) {
-            const { error } = await supabase
+            const { error } = await supabaseClient
                 .from('activity')
                 .delete()
                 .eq('id', activityIdToDelete);
