@@ -350,7 +350,7 @@ async function loadActivity() {
             start_time,
             end_time,
             is_recurring,
-            department:department_id (id, name, level)
+            major:major_id (id, name, level)
         `)
         .eq('id', activityId)
         .single()
@@ -369,7 +369,7 @@ async function loadActivity() {
 
     // 3. โหลด dropdown ของสาขาทั้งหมด
     const { data: depts, error: deptError } = await supabase
-        .from('department')
+        .from('major')
         .select('id, name, level')
         .order('name')
 
@@ -397,7 +397,7 @@ async function loadActivity() {
 const form = document.getElementById('createActivityForm')
 
 form.addEventListener('submit', async (e) => {
-    e.preventDefault()  // ป้องกันการ reload หน้า
+    e.preventDefault() // ป้องกัน reload หน้า
 
     // ดึงค่าจากฟอร์ม
     const name = document.getElementById('activityName').value
@@ -407,38 +407,123 @@ form.addEventListener('submit', async (e) => {
     const departmentId = document.getElementById('department').value
     const level = document.getElementById('level').value
     const recurringDays = document.getElementById('recurringDays').value
+    const studentId = document.getElementById('studentId').value   // 👈 เพิ่ม input hidden หรือ select สำหรับ student
+    const status = document.getElementById('status').value         // 👈 สถานะ Attended / Absent / Excused
 
     // แปลง date + time เป็น timestamp ISO
     const [day, month, year] = activityDate.split('/')
     const startDateTime = new Date(`${year}-${month}-${day}T${startTime}:00`).toISOString()
     const endDateTime = new Date(`${year}-${month}-${day}T${endTime}:00`).toISOString()
 
-    // อัปเดต activity ใน Supabase
-    const { data, error } = await supabase
+    // ✅ อัปเดตข้อมูลกิจกรรม
+    const { data: updatedActivity, error: updateError } = await supabase
         .from('activity')
         .update({
             name: name,
             start_time: startDateTime,
             end_time: endDateTime,
             is_recurring: recurringDays > 0,
-            department_id: departmentId
+            major_id: majorId
         })
         .eq('id', activityId)
-        .select()  // เลือกข้อมูลที่อัปเดตกลับมา (optional)
+        .select()
 
-    if (error) {
-        alert('เกิดข้อผิดพลาด: ' + error.message)
-        console.error(error)
-    } else {
-        alert('อัปเดตกิจกรรมเรียบร้อยแล้ว!')
-        console.log('Updated activity:', data)
-        // สามารถ redirect ไปหน้ากิจกรรมทั้งหมดได้
-        // window.location.href = 'edit_delete_activity.html'
+    if (updateError) {
+        alert('เกิดข้อผิดพลาดในการอัปเดตกิจกรรม: ' + updateError.message)
+        console.error(updateError)
+        return
     }
+
+    // ✅ เพิ่มบันทึกการเช็กชื่อ (attendance)
+    const { data: checkData, error: checkError } = await supabase
+        .from('activity_check')
+        .upsert([   // ใช้ upsert เพื่อไม่ให้ซ้ำ (ตาม unique key)
+            {
+                activity_id: activityId,
+                student_id: studentId,
+                status: status
+            }
+        ], { onConflict: 'activity_id,student_id,date' }) // ป้องกัน insert ซ้ำ
+
+    if (checkError) {
+        alert('เกิดข้อผิดพลาดในการบันทึกการเช็กชื่อ: ' + checkError.message)
+        console.error(checkError)
+        return
+    }
+
+    alert('อัปเดตกิจกรรมและบันทึกสถานะเรียบร้อยแล้ว!')
+    console.log('Updated Activity:', updatedActivity)
+    console.log('Saved Check:', checkData)
+
+    // redirect ถ้าต้องการ
+    // window.location.href = 'edit_delete_activity.html'
 })
 
-// เรียกเมื่อโหลดหน้า
-document.addEventListener('DOMContentLoaded', loadActivity)
+
+async function loadAttendanceTable() {
+    const tableBody = document.querySelector('.attendance-table tbody');
+    tableBody.innerHTML = ''; // ล้างข้อมูลเก่าออกก่อน
+
+    // ✅ ดึงข้อมูล activity_check ที่ join กับ student
+    const { data, error } = await supabase
+        .from('activity_check')
+        .select(`
+            id,
+            student:student_id (
+                id,
+                name
+            ),
+            status
+        `)
+        .eq('activity_id', activityId)
+        .order('student_id', { ascending: true });
+
+    if (error) {
+        console.error('Error loading attendance:', error);
+        return;
+    }
+
+    // ✅ แปลงค่า status จากฐานข้อมูลให้ตรงกับ radio ที่คุณใช้ใน HTML
+    const statusMap = {
+        'Attended': 'present',
+        'Excused': 'late',
+        'Absent': 'absent'
+    };
+
+    // ✅ วนสร้างแต่ละแถว
+    data.forEach((record, index) => {
+        const row = document.createElement('tr');
+
+        const studentName = record.student?.name || '-';
+        const studentId = record.student?.id || '-';
+        const status = statusMap[record.status] || '';
+
+        row.innerHTML = `
+            <td>${studentName}</td>
+            <td>${studentId}</td>
+            <td>
+                <input type="radio" name="status${index}" id="present${index}" value="present" ${status === 'present' ? 'checked' : ''}>
+                <label for="present${index}" class="present-btn"></label>
+            </td>
+            <td>
+                <input type="radio" name="status${index}" id="late${index}" value="late" ${status === 'late' ? 'checked' : ''}>
+                <label for="late${index}" class="late-btn"></label>
+            </td>
+            <td>
+                <input type="radio" name="status${index}" id="absent${index}" value="absent" ${status === 'absent' ? 'checked' : ''}>
+                <label for="absent${index}" class="absent-btn"></label>
+            </td>
+        `;
+
+        tableBody.appendChild(row);
+    });
+}
+
+// ✅ เรียกใช้หลังโหลดกิจกรรมเสร็จ
+document.addEventListener('DOMContentLoaded', async () => {
+    await loadActivity();
+    await loadAttendanceTable();
+});
 
 </script>
 
