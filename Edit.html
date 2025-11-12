@@ -737,10 +737,11 @@ form.addEventListener('submit', async (e) => {
         if (!recordId || !statusValue) continue
 
         const statusMap = { present:'Attended', late:'Excused', absent:'Absent' }
-
+        const [day, month, year] = activityDate.split('/')
+        const formattedDate = `${day}/${month}/${year}`  // DD/MM/YYYY
         // อัปเดต status และ date
         const { error } = await supabase.from('activity_check')
-            .update({ status: statusMap[statusValue], date: isoDate })
+            .update({ status: statusMap[statusValue], date: formattedDate })
             .eq('id', recordId)
 
         if (error) { console.error(error); alert('เกิดข้อผิดพลาดในการบันทึก: '+error.message); return }
