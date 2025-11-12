@@ -632,59 +632,38 @@ input[type="radio"]:checked + label.late-btn::after {
             locale: "th"
         });
     </script>
-    <script type="module">
-// ตัวอย่าง Supabase v2
+
+<script type="module">
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
 
 const SUPABASE_URL = 'https://pdqzkejlefozxquptoco.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBkcXprZWpsZWZvenhxdXB0b2NvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIzNDIyODAsImV4cCI6MjA3NzkxODI4MH0.EojnxNcGPj7eGlf7FAJOgMuEXIW54I2NQwB_L2Wj9DU';
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
 
-// ดึงค่า activityId จาก URL
 const params = new URLSearchParams(window.location.search)
 const activityId = params.get('activityId')
 
+// โหลดข้อมูล activity
 async function loadActivity() {
-    // 1. ดึงข้อมูล activity พร้อม join กับ department
-    const { data, error } = await supabase
+    const { data: activity, error } = await supabase
         .from('activity')
-        .select(`
-            id,
-            name,
-            start_time,
-            end_time,
-            is_recurring,
-            major:major_id (id, name, level)
-        `)
+        .select(`id, name, start_time, end_time, is_recurring, major:major_id (id,name,level)`)
         .eq('id', activityId)
         .single()
 
-    if (error) {
-        console.error(error)
-        return
-    }
+    if (error) { console.error(error); return }
 
-    // 2. ใส่ข้อมูลลงฟอร์ม
-    document.getElementById('activityName').value = data.name
-    document.getElementById('activityDate').value = new Date(data.start_time).toLocaleDateString('th-TH')
-    document.getElementById('startTime').value = new Date(data.start_time).toISOString().slice(11,16)
-    document.getElementById('endTime').value = new Date(data.end_time).toISOString().slice(11,16)
-    document.getElementById('recurringDays').value = data.is_recurring ? 1 : 0
+    document.getElementById('activityName').value = activity.name
+    document.getElementById('activityDate').value = new Date(activity.start_time).toLocaleDateString('th-TH')
+    document.getElementById('startTime').value = new Date(activity.start_time).toISOString().slice(11,16)
+    document.getElementById('endTime').value = new Date(activity.end_time).toISOString().slice(11,16)
+    document.getElementById('recurringDays').value = activity.is_recurring ? 1 : 0
 
-    // 3. โหลด dropdown ของสาขาทั้งหมด
-    const { data: depts, error: deptError } = await supabase
-        .from('major')
-        .select('id, name, level')
-        .order('name')
-
-    if (deptError) {
-        console.error(deptError)
-        return
-    }
+    const { data: depts, error: deptError } = await supabase.from('major').select('id,name,level').order('name')
+    if (deptError) { console.error(deptError); return }
 
     const deptSelect = document.getElementById('department')
     deptSelect.innerHTML = '<option value="">เลือกสาขา</option>'
-
     depts.forEach(d => {
         const option = document.createElement('option')
         option.value = d.id
@@ -692,144 +671,92 @@ async function loadActivity() {
         deptSelect.appendChild(option)
     })
 
-    // 4. เลือกค่า department ของ activity
-    if (data.major) {
-        deptSelect.value = data.major.id
-        document.getElementById('level').value = data.major.level
+    if (activity.major) {
+        deptSelect.value = activity.major.id
+        document.getElementById('level').value = activity.major.level
     }
 }
-const form = document.getElementById('createActivityForm')
 
-form.addEventListener('submit', async (e) => {
-    e.preventDefault() // ป้องกัน reload หน้า
-
-    // ดึงค่าจากฟอร์ม
-    const name = document.getElementById('activityName').value
-    const startTime = document.getElementById('startTime').value
-    const endTime = document.getElementById('endTime').value
-    const activityDate = document.getElementById('activityDate').value
-    const departmentId = document.getElementById('department').value
-    const level = document.getElementById('level').value
-    const recurringDays = document.getElementById('recurringDays').value
-    const studentId = document.getElementById('studentId').value   // 👈 เพิ่ม input hidden หรือ select สำหรับ student
-    const status = document.getElementById('status').value         // 👈 สถานะ Attended / Absent / Excused
-
-    // แปลง date + time เป็น timestamp ISO
-    const [day, month, year] = activityDate.split('/')
-    const startDateTime = new Date(`${year}-${month}-${day}T${startTime}:00`).toISOString()
-    const endDateTime = new Date(`${year}-${month}-${day}T${endTime}:00`).toISOString()
-
-    // ✅ อัปเดตข้อมูลกิจกรรม
-    const { data: updatedActivity, error: updateError } = await supabase
-        .from('activity')
-        .update({
-            name: name,
-            start_time: startDateTime,
-            end_time: endDateTime,
-            is_recurring: recurringDays > 0,
-            major_id: departmentId
-        })
-        .eq('id', activityId)
-        .select()
-
-    if (updateError) {
-        alert('เกิดข้อผิดพลาดในการอัปเดตกิจกรรม: ' + updateError.message)
-        console.error(updateError)
-        return
-    }
-
-    // ✅ เพิ่มบันทึกการเช็กชื่อ (attendance)
-    const { data: checkData, error: checkError } = await supabase
-        .from('activity_check')
-        .upsert([   // ใช้ upsert เพื่อไม่ให้ซ้ำ (ตาม unique key)
-            {
-                activity_id: activityId,
-                student_id: studentId,
-                status: status
-            }
-        ], { onConflict: 'activity_id,student_id,date' }) // ป้องกัน insert ซ้ำ
-
-    if (checkError) {
-        alert('เกิดข้อผิดพลาดในการบันทึกการเช็กชื่อ: ' + checkError.message)
-        console.error(checkError)
-        return
-    }
-
-    alert('อัปเดตกิจกรรมและบันทึกสถานะเรียบร้อยแล้ว!')
-    console.log('Updated Activity:', updatedActivity)
-    console.log('Saved Check:', checkData)
-
-    // redirect ถ้าต้องการ
-    // window.location.href = 'edit_delete_activity.html'
-})
-
-
+// โหลด attendance table
 async function loadAttendanceTable() {
-    const tableBody = document.querySelector('.attendance-table tbody');
-    tableBody.innerHTML = ''; // ล้างข้อมูลเก่าออกก่อน
+    const tableBody = document.querySelector('.attendance-table tbody')
+    tableBody.innerHTML = ''
 
-    // ✅ ดึงข้อมูล activity_check ที่ join กับ student
     const { data, error } = await supabase
         .from('activity_check')
-        .select(`
-            id,
-            student:student_id (
-                id,
-                name
-            ),
-            status
-        `)
+        .select(`id, student:student_id (id,name), status`)
         .eq('activity_id', activityId)
-        .order('student_id', { ascending: true });
+        .order('student_id', { ascending: true })
 
-    if (error) {
-        console.error('Error loading attendance:', error);
-        return;
-    }
+    if (error) { console.error(error); return }
 
-    // ✅ แปลงค่า status จากฐานข้อมูลให้ตรงกับ radio ที่คุณใช้ใน HTML
-    const statusMap = {
-        'Attended': 'present',
-        'Excused': 'late',
-        'Absent': 'absent'
-    };
+    const statusMap = { 'Attended':'present', 'Excused':'late', 'Absent':'absent' }
 
-    // ✅ วนสร้างแต่ละแถว
     data.forEach((record, index) => {
-        const row = document.createElement('tr');
+        const row = document.createElement('tr')
+        row.dataset.recordId = record.id  // เก็บ id ของ record เดิม
 
-        const studentName = record.student?.name || '-';
-        const studentId = record.student?.id || '-';
-        const status = statusMap[record.status] || '';
+        const studentName = record.student?.name || '-'
+        const studentId = record.student?.id || '-'
+        const status = statusMap[record.status] || ''
 
         row.innerHTML = `
             <td>${studentName}</td>
             <td>${studentId}</td>
             <td>
-                <input type="radio" name="status${index}" id="present${index}" value="present" ${status === 'present' ? 'checked' : ''}>
+                <input type="radio" name="status${index}" id="present${index}" value="present" ${status==='present'?'checked':''}>
                 <label for="present${index}" class="present-btn"></label>
             </td>
             <td>
-                <input type="radio" name="status${index}" id="late${index}" value="late" ${status === 'late' ? 'checked' : ''}>
+                <input type="radio" name="status${index}" id="late${index}" value="late" ${status==='late'?'checked':''}>
                 <label for="late${index}" class="late-btn"></label>
             </td>
             <td>
-                <input type="radio" name="status${index}" id="absent${index}" value="absent" ${status === 'absent' ? 'checked' : ''}>
+                <input type="radio" name="status${index}" id="absent${index}" value="absent" ${status==='absent'?'checked':''}>
                 <label for="absent${index}" class="absent-btn"></label>
             </td>
-        `;
-
-        tableBody.appendChild(row);
-    });
+        `
+        tableBody.appendChild(row)
+    })
 }
 
-// ✅ เรียกใช้หลังโหลดกิจกรรมเสร็จ
-document.addEventListener('DOMContentLoaded', async () => {
-    await loadActivity();
-    await loadAttendanceTable();
-});
+// submit form
+const form = document.getElementById('createActivityForm')
+form.addEventListener('submit', async (e) => {
+    e.preventDefault();
 
+    const activityDate = document.getElementById('activityDate').value
+    const [day, month, year] = activityDate.split('/')
+    const isoDate = `${year}-${month}-${day}`
+
+    const rows = document.querySelectorAll('.attendance-table tbody tr')
+    for (const [index,row] of Array.from(rows).entries()) {
+        const recordId = row.dataset.recordId
+        const statusInput = row.querySelector(`input[name="status${index}"]:checked`)
+        const statusValue = statusInput ? statusInput.value : null
+        if (!recordId || !statusValue) continue
+
+        const statusMap = { present:'Attended', late:'Excused', absent:'Absent' }
+
+        // อัปเดต status และ date
+        const { error } = await supabase.from('activity_check')
+            .update({ status: statusMap[statusValue], date: isoDate })
+            .eq('id', recordId)
+
+        if (error) { console.error(error); alert('เกิดข้อผิดพลาดในการบันทึก: '+error.message); return }
+    }
+
+    alert('บันทึกสถานะเรียบร้อยแล้ว!')
+    await loadAttendanceTable()
+})
+
+// โหลดหน้าจอครั้งแรก
+document.addEventListener('DOMContentLoaded', async () => {
+    await loadActivity()
+    await loadAttendanceTable()
+})
 </script>
+
 
 </body>
 </html>
