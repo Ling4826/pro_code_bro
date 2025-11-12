@@ -68,8 +68,8 @@ async function fetchAndRenderActivities() {
         const date = new Date(activity.start_time).toLocaleDateString('th-TH', { day: '2-digit', month: '2-digit', year: 'numeric' });
         
         // ข้อมูลสาขา
-        const departmentName = activity.department?.name || 'ไม่ระบุสาขา';
-        const departmentLevel = activity.department?.level || 'ไม่ระบุระดับ';
+        const departmentName = activity.major?.name || 'ไม่ระบุสาขา';
+        const departmentLevel = activity.major?.level || 'ไม่ระบุระดับ';
         const recurringDays = activity.is_recurring ? 'N' : '0';
 
         const cardHTML = `

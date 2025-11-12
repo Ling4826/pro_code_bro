@@ -47,11 +47,11 @@ async function handleCreateActivity(event) {
     const activityDate = form.activityDate.value; // YYYY-MM-DD (ค.ศ.)
     const startTime = form.startTime.value;       // HH:MM
     const endTime = form.endTime.value;         // HH:MM
-    const departmentId = form.department.value;
+    const majorId = form.department.value;
     const recurringDays = parseInt(form.recurringDays.value, 10);
 
     // 2. ตรวจสอบข้อมูลเบื้องต้น
-    if (!activityName || !activityDate || !startTime || !endTime || !departmentId) {
+    if (!activityName || !activityDate || !startTime || !endTime || !majorId) {
         alert('กรุณากรอกข้อมูลที่จำเป็น (*) ให้ครบถ้วน');
         return;
     }
@@ -84,10 +84,10 @@ async function handleCreateActivity(event) {
             for_leader: true,
             for_teacher: false,
             // ส่งค่า is_recurring ที่ถูกต้องตามที่คุณต้องการ
-            recurrence_interval: (recurringDays > 0) ? recurringDays : null,
+            is_recurring: (recurringDays > 0) ? recurringDays : null,
 
             created_by: 1,
-            department_id: parseInt(departmentId, 10)
+            major_id: parseInt(majorId, 10)
         };
 
         console.log('Activity Data to Insert:', activityData);
