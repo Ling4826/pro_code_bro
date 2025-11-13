@@ -1,37 +1,40 @@
 // เปลี่ยน YOUR_SUPABASE_URL และ YOUR_SUPABASE_ANON_KEY ด้วยค่าจริงของคุณ
 const SUPABASE_URL = 'https://pdqzkejlefozxquptoco.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBkcXprZWpsZWZvenhxdXB0b2NvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIzNDIyODAsImV4cCI6MjA3NzkxODI4MH0.EojnxNcGPj7eGlf7FAJOgMuEXIW54I2NQwB_L2Wj9DU'; // Key ของคุณ
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBkcXprZWpsZWZvenhxdXB0b2NvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIzNDIyODAsImV4cCI6MjA3NzkxODI4MH0.EojnxNcGPj7eGlf7FAJOgMuEXIW54I2NQwB_L2Wj9DU';
 
 // สร้าง Supabase Client
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+// -------------------------------------------------------------
+// *โหลดปีของนักเรียน*
+// -------------------------------------------------------------
+async function fetchStudentYear() {
+    console.log('Fetching Years...');
 
-async function fetchDepartments() {
-    console.log('Fetching departments...');
+    const { data: years, error } = await supabaseClient
+        .from('student')
+        .select('year');
 
-    // ดึงข้อมูลทั้งหมดจากตาราง 'major'
-    const { data: departments, error } = await supabaseClient
-        .from('major')
-        .select('id, name');
-
+    const yearSelect = document.getElementById('studentYear');
     if (error) {
-        console.error('Error fetching departments:', error.message);
-        const departmentSelect = document.getElementById('department');
-        departmentSelect.innerHTML = '<option value="">ไม่สามารถโหลดสาขาได้</option>';
+        console.error('Error fetching Years:', error.message);
+        yearSelect.innerHTML = '<option value="">ไม่สามารถโหลดปีการศึกษาได้</option>';
         return;
     }
 
-    const departmentSelect = document.getElementById('department');
-    departmentSelect.innerHTML = '<option value="">เลือกสาขา</option>';
+    yearSelect.innerHTML = '<option value="">เลือกปี</option>';
 
-    if (departments) {
-        departments.forEach(dept => {
+    if (years && years.length > 0) {
+        const uniqueYears = [...new Set(years.map(item => item.year))].sort();
+        uniqueYears.forEach(y => {
             const option = document.createElement('option');
-            option.value = dept.id;
-            option.textContent = dept.name;
-            departmentSelect.appendChild(option);
+            option.value = y;
+            option.textContent = y;
+            yearSelect.appendChild(option);
         });
-        console.log(`Departments loaded successfully: ${departments.length} items`);
+        console.log(`Years loaded successfully: ${uniqueYears.length} items`);
+    } else {
+        console.warn('No year data found');
     }
 }
 
@@ -44,38 +47,55 @@ async function handleCreateActivity(event) {
 
     // 1. ดึงค่าจากฟอร์ม
     const activityName = form.activityName.value;
-    const activityDate = form.activityDate.value; // YYYY-MM-DD (ค.ศ.)
-    const startTime = form.startTime.value;       // HH:MM
-    const endTime = form.endTime.value;         // HH:MM
+    const activityDate = form.activityDate.value;
+    const startTime = form.startTime.value;
+    const endTime = form.endTime.value;
     const majorId = form.department.value;
     const recurringDays = parseInt(form.recurringDays.value, 10);
+    const semester = parseInt(form.semester.value, 10);
+    const studentYear = parseInt(form.studentYear.value, 10);
 
-    // 2. ตรวจสอบข้อมูลเบื้องต้น
-    if (!activityName || !activityDate || !startTime || !endTime || !majorId) {
+    if (!activityName || !activityDate || !startTime || !endTime || !majorId || !semester || !studentYear) {
         alert('กรุณากรอกข้อมูลที่จำเป็น (*) ให้ครบถ้วน');
         return;
     }
 
-    // 3. แปลงวันที่และเวลาให้อยู่ในรูปแบบ ISO 8601 (TIMESTAMP WITH TIME ZONE)
     try {
+        // 🟢 ขั้นแรก: ตรวจว่านักเรียนในสาขา/ปีนี้มีไหม (ก่อนสร้าง activity)
+        const { data: students, error: studentError } = await supabaseClient
+            .from('student')
+            .select('id')
+            .eq('year', studentYear)
+            .eq('major_id', majorId);
+
+        if (studentError) {
+            console.error('Error fetching students:', studentError);
+            alert('ไม่สามารถโหลดรายชื่อนักเรียนได้');
+            return;
+        }
+
+        if (!students || students.length === 0) {
+            alert('⚠️ ไม่พบนักเรียนในปีและสาขาที่เลือก — ระบบจะไม่สร้างกิจกรรม');
+            return; // ❌ หยุดทำงานก่อน insert activity
+        }
+
+        // 2. แปลงเวลาเป็น ISO 8601
         const [year, month, day] = activityDate.split('-').map(Number);
         const [startHour, startMinute] = startTime.split(':').map(Number);
         const [endHour, endMinute] = endTime.split(':').map(Number);
 
-        // **สำคัญ:** สร้าง Date Object โดยใช้ Constructor ที่ตีความค่าเป็น Local Time (GMT+7)
         const startDateTime = new Date(year, month - 1, day, startHour, startMinute, 0);
         const endDateTime = new Date(year, month - 1, day, endHour, endMinute, 0);
 
-        const start_time_iso = startDateTime.toISOString();
-        const end_time_iso = endDateTime.toISOString();
-
-        // ตรวจสอบความถูกต้องของเวลา
         if (startDateTime >= endDateTime) {
             alert('เวลาสิ้นสุดต้องมากกว่าเวลาเริ่มต้น');
             return;
         }
 
-        // 4. เตรียมข้อมูลสำหรับ Insert
+        const start_time_iso = startDateTime.toISOString();
+        const end_time_iso = endDateTime.toISOString();
+
+        // 3. เตรียมข้อมูลกิจกรรม
         const activityData = {
             name: activityName,
             start_time: start_time_iso,
@@ -83,25 +103,50 @@ async function handleCreateActivity(event) {
             for_student: true,
             for_leader: true,
             for_teacher: false,
-            // ส่งค่า is_recurring ที่ถูกต้องตามที่คุณต้องการ
             is_recurring: (recurringDays > 0) ? recurringDays : null,
-
             created_by: 1,
             major_id: parseInt(majorId, 10)
         };
 
         console.log('Activity Data to Insert:', activityData);
 
-        // 5. Insert ข้อมูลลงใน Supabase
-        const { error } = await supabaseClient
+        // 4. Insert activity
+        const { data: insertedActivity, error: insertError } = await supabaseClient
             .from('activity')
-            .insert([activityData]);
+            .insert([activityData])
+            .select('id')
+            .single();
 
-        if (error) {
-            console.error('Supabase Insert Error:', error);
-            alert(`สร้างกิจกรรมไม่สำเร็จ: ${error.message}`);
+        if (insertError) {
+            console.error('Supabase Insert Error:', insertError);
+            alert(`สร้างกิจกรรมไม่สำเร็จ: ${insertError.message}`);
+            return;
+        }
+
+        const activityId = insertedActivity.id;
+        console.log('✅ Activity Created with ID:', activityId);
+
+        // 5. เตรียมข้อมูลสำหรับ activity_check
+        const academicYear = new Date(activityDate).getFullYear();
+        const checkRecords = students.map(s => ({
+            activity_id: activityId,
+            student_id: s.id,
+            status: 'Absent',
+            date: activityDate,
+            semester: semester,
+            academic_year: academicYear
+        }));
+
+        // 6. Insert activity_check ทั้งหมด
+        const { error: checkError } = await supabaseClient
+            .from('activity_check')
+            .insert(checkRecords);
+
+        if (checkError) {
+            console.error('Error inserting activity_check:', checkError);
+            alert(`เกิดข้อผิดพลาดตอนเพิ่ม activity_check: ${checkError.message}`);
         } else {
-            alert(`สร้างกิจกรรม "${activityName}" สำเร็จแล้ว!`);
+            alert(`✅ สร้างกิจกรรม "${activityName}" และบันทึกนักเรียน ${students.length} คนสำเร็จแล้ว`);
             form.reset();
         }
 
@@ -110,10 +155,12 @@ async function handleCreateActivity(event) {
         alert('เกิดข้อผิดพลาดในการประมวลผลวันที่/เวลา');
     }
 }
-// ฟังก์ชันดึงข้อมูลสาขาทั้งหมดจาก Supabase
+
+// -------------------------------------------------------------
+// *โหลดข้อมูล Major ทั้งหมด*
+// -------------------------------------------------------------
 async function fetchAllMajors() {
     console.log('Fetching all majors...');
-
     const { data: majors, error } = await supabaseClient
         .from('major')
         .select('id, name, level');
@@ -128,18 +175,15 @@ async function fetchAllMajors() {
     return majors;
 }
 
-// ฟังก์ชันกรองและอัปเดตรายการสาขาตามระดับที่เลือก
+// -------------------------------------------------------------
+// *อัปเดต dropdown สาขาตามระดับที่เลือก*
+// -------------------------------------------------------------
 function updateDepartmentOptions(selectedLevel, majors) {
     const departmentSelect = document.getElementById('department');
     departmentSelect.innerHTML = '<option value="">เลือกสาขา</option>';
 
-    // กรอง major ตามระดับที่เลือก
     let filteredMajors = majors.filter(m => m.level === selectedLevel);
-
-    // ถ้าไม่พบสาขาที่ตรงกับระดับ ให้แสดงทั้งหมดแทน
-    if (filteredMajors.length === 0) {
-        filteredMajors = majors; // ใช้ major ทั้งหมด
-    }
+    if (filteredMajors.length === 0) filteredMajors = majors;
 
     filteredMajors.forEach(m => {
         const option = document.createElement('option');
@@ -149,15 +193,13 @@ function updateDepartmentOptions(selectedLevel, majors) {
     });
 }
 
-
 // -------------------------------------------------------------
-// *DOM Content Loaded Event Listener (เรียกใช้ Flatpickr ที่นี่)*
+// *เริ่มต้นเมื่อ DOM โหลดเสร็จ*
 // -------------------------------------------------------------
 document.addEventListener('DOMContentLoaded', async () => {
-    // 1. โหลดข้อมูล major ทั้งหมดไว้ในหน่วยความจำ
     const allMajors = await fetchAllMajors();
+    await fetchStudentYear();
 
-    // 2. ผูก event กับ dropdown ของระดับ
     const levelSelect = document.getElementById('level');
     if (levelSelect) {
         levelSelect.addEventListener('change', () => {
@@ -166,7 +208,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    // 3. เรียก Flatpickr
     flatpickr(".flatpickr-thai", {
         locale: "th",
         dateFormat: "Y-m-d",
@@ -184,7 +225,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         minuteIncrement: 1,
     });
 
-    // 4. ฟอร์มสร้างกิจกรรม
     const form = document.getElementById('createActivityForm');
     if (form) {
         form.addEventListener('submit', handleCreateActivity);
