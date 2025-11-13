@@ -709,13 +709,30 @@ async function loadActivity() {
         console.error('Error fetching student years:', studentError);
         return;
     }
+    // 4.โหลดวันที่จัดกิจกรรม
+    const { data: activity_check, error:ActError } = await supabase
+        .from('activity_check')
+        .select('date')
+        .eq('activity_id', activityId)
+    if (ActError) { console.error(ActError); return }
+    let initialDate = null;
+    if (activity_check && activity_check.length > 0) {
+        initialDate = activity_check[0].date; // YYYY-MM-DD
+    } else {
+        initialDate = activity.start_time; // fallback
+    }
 
-    // 4. เก็บปีการศึกษาเป็น array unique
-    // 4. เก็บปีการศึกษาเป็น array unique
+    // กำหนด flatpickr ใหม่พร้อม defaultDate
+    flatpickr("#activityDate", {
+        dateFormat: "d/m/Y",
+        locale: "th",
+        defaultDate: initialDate
+    });
+    // 5. เก็บปีการศึกษาเป็น array unique
 const studentYears = [...new Set(students.map(s => s.year))].sort();
 console.log(`Loaded student years for major ${activity.major.name}:`, studentYears);
 
-// 5. อัปเดต select ของปีการศึกษา
+// 6. อัปเดต select ของปีการศึกษา
 const yearSelect = document.getElementById('studentYear');
 yearSelect.innerHTML = '<option value="">เลือกปี</option>'; // รีเซ็ตก่อน
 studentYears.forEach(y => {
@@ -725,7 +742,7 @@ studentYears.forEach(y => {
     yearSelect.appendChild(option);
 });
 
-// 6. เลือกค่า default
+// 7. เลือกค่า default
 if (studentYears.length > 0) {
     yearSelect.value = studentYears[0];
 }
