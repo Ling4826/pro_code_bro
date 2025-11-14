@@ -718,7 +718,7 @@ async function fetchStudentYear() {
     const yearSelect = document.getElementById('studentYear');
     if (error) {
         console.error('Error fetching Years:', error.message);
-        yearSelect.innerHTML = '<option value="">ไม่สามารถโหลดปีการศึกษาได้</option>';
+        yearSelect.innerHTML = '<option value=""> </option>';
         return;
     }
 
