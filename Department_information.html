@@ -49,69 +49,46 @@
     <div class="content">
         <h2 class="page-title">ข้อมูลสาขา</h2>
 
-        <div class="filter-controls">
-            <label for="department">สาขา</label>
-            <select id="department" class="filter-select">
-                <option>เลือกสาขา</option>
-                <option>เทคโนโลยีคอมพิวเตอร์</option>
-                <option>ไฟฟ้ากำลัง</option>
-                <option>เครื่องกล</option>
-            </select>
+       <div class="filter-controls">
+    <label for="level">ระดับ</label>
+    <select id="level" class="filter-select">
+        <option value="">เลือกระดับ</option>
+    </select>
 
-            <label for="level">ระดับ</label>
-            <select id="level" class="filter-select">
-                <option>เลือกระดับ</option>
-                <option>ปวช.</option>
-                <option>ปวส.</option>
-            </select>
-        </div>
+    <label for="studentYear">ชั้นปี</label>
+    <select id="studentYear" class="filter-select">
+        <option value="">เลือกชั้นปี</option>
+        <option value="1">ปี 1</option>
+        <option value="2">ปี 2</option>
+        <option value="3">ปี 3</option>
+    </select>
+    
+    <label for="department">สาขา</label>
+    <select id="department" class="filter-select">
+        <option value="">เลือกสาขา</option>
+    </select>
+    <label for="classNumber">ห้อง</label>
+    <select id="classNumber" class="filter-select">
+        <option value="">เลือกห้อง</option>
+        <option value="1">ห้อง 1</option>
+        <option value="2">ห้อง 2</option>
+        <option value="3">ห้อง 3</option>
+    </select>
+</div>
 
-        <table class="data-table">
+       <table class="data-table">
             <thead>
                 <tr>
                     <th>ชื่อ</th>
+                    <th>ชั้นปี</th>
+                    <th>ห้อง</th>
                     <th>รหัสนักศึกษา</th>
                     <th>บทบาท</th>
                 </tr>
             </thead>
             <tbody>
-                <tr>
-                    <td>นาย แมวตัวใหญ่ ใส่สะกุน</td>
-                    <td>642115067</td>
-                    <td>
-                        <select class="role-select">
-                            <option>นักเรียน</option>
-                            <option>ผู้ช่วยอาจารย์</option>
-                            <option>อาจารย์</option>
-                        </select>
-                    </td>
-                </tr>
-                <tr>
-                    <td>นาย ใส่ช้าไป ใกล้อยู่</td>
-                    <td>642115068</td>
-                    <td>
-                        <select class="role-select">
-                            <option>นักเรียน</option>
-                            <option selected>ผู้ช่วยอาจารย์</option>
-                            <option>อาจารย์</option>
-                        </select>
-                    </td>
-                </tr>
-                <tr>
-                    <td>นาย ใส่หน้ากุณโง กำอะไร</td>
-                    <td>642115069</td>
-                    <td>
-                        <select class="role-select">
-                            <option selected>นักเรียน</option>
-                            <option>ผู้ช่วยอาจารย์</option>
-                            <option>อาจารย์</option>
-                        </select>
-                    </td>
-                </tr>
-            </tbody>
+                </tbody>
         </table>
-    </div>
-  </div>
-
+    </div> </div>
 </body>
 </html>
