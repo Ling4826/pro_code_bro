@@ -524,9 +524,9 @@ input[type="radio"]:checked + label.late-btn::after {
 
                 <div class="form-row">
                     <div class="form-group">
-                        <label for="department" class="required">สาขา</label>
+                        <label for="department">สาขา</label>
                         <div class="input-icon-group">
-                            <select id="department" name="department" required>
+                            <select id="department" name="department">
                                 <option value="">เลือกสาขา</option>
                                 <option value="1">ไฟฟ้า</option>
                                 <option value="2">ช่างยนต์</option>
@@ -536,9 +536,9 @@ input[type="radio"]:checked + label.late-btn::after {
                     </div>
 
                     <div class="form-group">
-                        <label for="level" class="required">ระดับ</label>
+                        <label for="level" >ระดับ</label>
                         <div class="input-icon-group">
-                            <select id="level" name="level" required>
+                            <select id="level" name="level">
                                 <option value="">เลือกระดับ</option>
                                 <option value="ปวช.">ปวช.</option>
                                 <option value="ปวส.">ปวส.</option>
@@ -557,8 +557,8 @@ input[type="radio"]:checked + label.late-btn::after {
                             </select>
                         </div>
                         <div class="form-group">
-                            <label for="studentYear" class="required">ปี</label>
-                            <select id="studentYear" name="studentYear" required>
+                            <label for="studentYear">ปี</label>
+                            <select id="studentYear" name="studentYear">
                                 <option value>เลือกปี</option>
                             </select>
                         </div>
@@ -577,58 +577,17 @@ input[type="radio"]:checked + label.late-btn::after {
                 <th>ชื่อ</th>
                 <th>รหัสนักศึกษา</th>
                 <th>มา</th>
-                <th>สาย</th>
                 <th>ขาด</th>
             </tr>
         </thead>
         <tbody>
             <tr>
-                <td>1</td>
-                <td>640101</td>
-                <td>
-                    <input type="radio" name="status1" id="present1" value="present">
-                    <label for="present1" class="present-btn"></label>
-                </td>
-                <td>
-                    <input type="radio" name="status1" id="late1" value="late">
-                    <label for="late1" class="late-btn"></label>
-                </td>
-                <td>
-                    <input type="radio" name="status1" id="absent1" value="absent">
-                    <label for="absent1" class="absent-btn"></label>
-                </td>
             </tr>
             <tr>
-                <td>2</td>
-                <td>640102</td>
-                <td>
-                    <input type="radio" name="status2" id="present2" value="present">
-                    <label for="present2" class="present-btn"></label>
-                </td>
-                <td>
-                    <input type="radio" name="status2" id="late2" value="late">
-                    <label for="late2" class="late-btn"></label>
-                </td>
-                <td>
-                    <input type="radio" name="status2" id="absent2" value="absent">
-                    <label for="absent2" class="absent-btn"></label>
-                </td>
+                
             </tr>
             <tr>
-                <td>3</td>
-                <td>640103</td>
-                <td>
-                    <input type="radio" name="status3" id="present3" value="present">
-                    <label for="present3" class="present-btn"></label>
-                </td>
-                <td>
-                    <input type="radio" name="status3" id="late3" value="late">
-                    <label for="late3" class="late-btn"></label>
-                </td>
-                <td>
-                    <input type="radio" name="status3" id="absent3" value="absent">
-                    <label for="absent3" class="absent-btn"></label>
-                </td>
+                
             </tr>
         </tbody>
     </table>
@@ -776,6 +735,33 @@ async function fetchStudentYear() {
         console.warn('No year data found');
     }
 }
+function attachRadioToggleBehavior(container = document) {
+    container.querySelectorAll('input[type="radio"]').forEach(radio => {
+        if (radio.dataset.listenerAttached === "true") return;
+
+        radio.addEventListener('click', function (event) {
+            // ถ้า radio ถูกเลือกแล้ว กดซ้ำ uncheck
+            if (this.checked && this.dataset.waschecked === "true") {
+                event.preventDefault(); // ป้องกัน browser ตั้งค่า checked อัตโนมัติ
+                const that = this;
+                setTimeout(() => { // รอให้ browser ทำงานเสร็จ
+                    that.checked = false;
+                    that.dataset.waschecked = "false";
+                }, 0);
+            } else {
+                // รีเซ็ตทุกตัวในกลุ่มเดียวกัน
+                const group = container.querySelectorAll(`input[name="${this.name}"]`);
+                group.forEach(r => r.dataset.waschecked = "false");
+                this.dataset.waschecked = "true";
+            }
+        });
+
+        radio.dataset.listenerAttached = "true";
+    });
+}
+
+
+
 // โหลด attendance table
 async function loadAttendanceTable() {
     const tableBody = document.querySelector('.attendance-table tbody')
@@ -789,7 +775,7 @@ async function loadAttendanceTable() {
 
     if (error) { console.error(error); return }
 
-    const statusMap = { 'Attended':'present', 'Excused':'late', 'Absent':'absent' }
+    const statusMap = { 'Attended':'present', 'Absent':'absent' }
 
     data.forEach((record, index) => {
         const row = document.createElement('tr')
@@ -803,20 +789,17 @@ async function loadAttendanceTable() {
             <td>${studentName}</td>
             <td>${studentId}</td>
             <td>
-                <input type="radio" name="status${index}" id="present${index}" value="present" ${status==='present'?'checked':''}>
+                <input type="radio" name="status${index}" id="present${index}" value="present" data-index="${index}" ${status==='present'?'checked':''}>
                 <label for="present${index}" class="present-btn"></label>
             </td>
             <td>
-                <input type="radio" name="status${index}" id="late${index}" value="late" ${status==='late'?'checked':''}>
-                <label for="late${index}" class="late-btn"></label>
-            </td>
-            <td>
-                <input type="radio" name="status${index}" id="absent${index}" value="absent" ${status==='absent'?'checked':''}>
+                <input type="radio" name="status${index}" id="absent${index}" value="absent" data-index="${index}" ${status==='absent'?'checked':''}>
                 <label for="absent${index}" class="absent-btn"></label>
             </td>
         `
         tableBody.appendChild(row)
     })
+    attachRadioToggleBehavior(tableBody);
 }
 
 // submit form
