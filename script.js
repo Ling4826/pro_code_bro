@@ -34,7 +34,7 @@ async function fetchDepartments() {
 /**
  * 1. ฟังก์ชันดึงข้อมูลกิจกรรมและแสดงผลใน Activity Card
  */
-async function fetchAndRenderActivities() {
+async function fetchActivities() {
     const container = document.getElementById('activityCardContainer');
     container.innerHTML = ''; // ล้างข้อมูลเดิม
 
@@ -58,11 +58,62 @@ async function fetchAndRenderActivities() {
     }
 
     if (activities.length === 0) {
-         container.innerHTML = '<p>ไม่พบกิจกรรมที่ถูกบันทึกไว้</p>';
-         return;
+        container.innerHTML = '<p>ไม่พบกิจกรรมที่ถูกบันทึกไว้</p>';
+        return;
     }
+    RenderActivityCards(activities,container);
+// Event สำหรับ filter
+document.getElementById('levelFilter').addEventListener('change', () => filterActivities(activities));
+document.getElementById('departmentFilter').addEventListener('change', () => filterActivities(activities));
+document.getElementById("activityNameInput").addEventListener("input", () => {getActivityByName(activities);});
+
+}
+// ฟังก์ชันค้นชื่อกิจกรรม
+function getActivityByName(activities) {
+    const keyword = document.getElementById("activityNameInput").value.toLowerCase();
 
     activities.forEach(activity => {
+        const card = document.querySelector(`.activity-card[data-id="${activity.id}"]`);
+        if (!card) return;
+
+        const activityName = activity.name.toLowerCase();
+
+        // ตรวจสอบว่าตรง keyword ไหม
+        const match = activityName.includes(keyword);
+
+        // แสดง / ซ่อนการ์ด
+        card.style.display = match ? "block" : "none";
+    });
+}
+
+
+// ฟังก์ชันกรอง Activity Cards ตามตัวเลือก
+function filterActivities(activities) {
+    const levelSelect = document.getElementById('levelFilter');
+    const departmentSelect = document.getElementById('departmentFilter');
+
+    const selectedLevel = levelSelect.value;
+    const selectedDept = departmentSelect.value;
+
+    activities.forEach(activity => {
+        const card = document.querySelector(`.activity-card[data-id="${activity.id}"]`);
+        if (!card) return;
+
+        const activityLevel = activity.major?.level || '';
+        const activityDeptName = activity.major?.name || '';
+
+        // เช็คว่าตรงกับ filter หรือไม่
+        const matchLevel = selectedLevel === '' || selectedLevel === activityLevel;
+        const matchDept = selectedDept === '' || selectedDept === activityDeptName;
+
+        // แสดง/ซ่อน card
+        card.style.display = (matchLevel && matchDept) ? 'block' : 'none';
+    });
+}
+
+// ฟังก์ชันสร้าง Activity Cards
+function RenderActivityCards(activities,container) {
+        activities.forEach(activity => {
         const startTime = new Date(activity.start_time).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Bangkok' });
         const endTime = new Date(activity.end_time).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Bangkok' });
         const date = new Date(activity.start_time).toLocaleDateString('th-TH', { day: '2-digit', month: '2-digit', year: 'numeric' });
@@ -73,7 +124,7 @@ async function fetchAndRenderActivities() {
         const recurringDays = activity.is_recurring ? 'N' : '0';
 
         const cardHTML = `
-            <div class="activity-card" data-id="${activity.id}" data-name="${activity.name}" data-dept-id="${activity.department?.id}">
+            <div class="activity-card" data-id="${activity.id}" data-name="${activity.name}" data-dept-id="${departmentName }">
                 <div class="card-title">กิจกรรม ${activity.name}</div>
                 <div class="card-detail">วัน <span>${date}</span> เวลา <span>${startTime} - ${endTime}</span></div>
                 <div class="card-detail">สาขา <span>${departmentName}</span> ระดับ <span>${departmentLevel}</span></div>
@@ -165,5 +216,5 @@ if (confirmDialog) {
 document.addEventListener('DOMContentLoaded', () => {
     // ดึงสาขามาใส่ filter และดึงกิจกรรมมาแสดง
     fetchDepartments();
-    fetchAndRenderActivities();
+    fetchActivities();
 });

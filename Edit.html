@@ -840,7 +840,7 @@ form.addEventListener('submit', async (e) => {
     const semester = parseInt(document.getElementById('semester').value)
     const academicYear = parseInt(document.getElementById('studentYear').value)
 
-    if (!semester || !academicYear) {
+    if (!semester) {
         alert('กรุณาเลือกเทอมและปีการศึกษา')
         return
     }

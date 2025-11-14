@@ -14,28 +14,21 @@ async function fetchStudentYear() {
     const { data: years, error } = await supabaseClient
         .from('student')
         .select('year');
-
+        
     const yearSelect = document.getElementById('studentYear');
     if (error) {
         console.error('Error fetching Years:', error.message);
-        yearSelect.innerHTML = '<option value="">ไม่สามารถโหลดปีการศึกษาได้</option>';
         return;
     }
 
-    yearSelect.innerHTML = '<option value="">เลือกปี</option>';
+    if (years?.length) {
+    const uniqueYears = [...new Set(years.map(s => s.year))].sort();
+    yearSelect.innerHTML += uniqueYears
+        .map(y => `<option value="${y}">${y}</option>`)
+        .join("");
+    console.log(`Years loaded successfully: ${uniqueYears.length} items`);
+}
 
-    if (years && years.length > 0) {
-        const uniqueYears = [...new Set(years.map(item => item.year))].sort();
-        uniqueYears.forEach(y => {
-            const option = document.createElement('option');
-            option.value = y;
-            option.textContent = y;
-            yearSelect.appendChild(option);
-        });
-        console.log(`Years loaded successfully: ${uniqueYears.length} items`);
-    } else {
-        console.warn('No year data found');
-    }
 }
 
 // -------------------------------------------------------------
@@ -45,116 +38,124 @@ async function handleCreateActivity(event) {
     event.preventDefault();
     const form = event.target;
 
-    // 1. ดึงค่าจากฟอร์ม
     const activityName = form.activityName.value;
     const activityDate = form.activityDate.value;
     const startTime = form.startTime.value;
     const endTime = form.endTime.value;
-    const majorId = form.department.value;
-    const recurringDays = parseInt(form.recurringDays.value, 10);
     const semester = parseInt(form.semester.value, 10);
-    const studentYear = parseInt(form.studentYear.value, 10);
+    const recurringDays = parseInt(form.recurringDays.value, 10);
 
-    if (!activityName || !activityDate || !startTime || !endTime || !majorId || !semester || !studentYear) {
+    // ฟิลเตอร์ (ไม่บังคับ)
+    const level = form.level.value || "";
+    const majorId = form.department.value || "";
+    const studentYear = form.studentYear.value || "";
+
+    // เช็กเฉพาะฟิลด์ที่จำเป็นจริงๆ
+    if (!activityName || !activityDate || !startTime || !endTime || !semester) {
         alert('กรุณากรอกข้อมูลที่จำเป็น (*) ให้ครบถ้วน');
         return;
     }
 
     try {
-        // 🟢 ขั้นแรก: ตรวจว่านักเรียนในสาขา/ปีนี้มีไหม (ก่อนสร้าง activity)
-        const { data: students, error: studentError } = await supabaseClient
+        // ----------------------
+        //  สร้าง Query ของ student
+        // ----------------------
+        let studentQuery = supabaseClient
             .from('student')
-            .select('id')
-            .eq('year', studentYear)
-            .eq('major_id', majorId);
+            .select('id');
+
+        //  ถ้าทั้ง 3 ฟิลเตอร์ว่าง → ดึงนักเรียนทั้งหมด
+        if (!level && !majorId && !studentYear) {
+            console.log("📌 ดึงนักเรียนทั้งหมด (ไม่กรอง)");
+        } else {
+            // กรองเฉพาะฟิลด์ที่มีค่า
+            if (level) studentQuery = studentQuery.eq('level', level);
+            if (majorId) studentQuery = studentQuery.eq('major_id', parseInt(majorId));
+            if (studentYear) studentQuery = studentQuery.eq('year', parseInt(studentYear));
+        }
+
+        const { data: students, error: studentError } = await studentQuery;
 
         if (studentError) {
-            console.error('Error fetching students:', studentError);
-            alert('ไม่สามารถโหลดรายชื่อนักเรียนได้');
+            console.error(studentError);
+            alert("ดึงข้อมูลนักเรียนล้มเหลว");
             return;
         }
 
         if (!students || students.length === 0) {
-            alert('⚠️ ไม่พบนักเรียนในปีและสาขาที่เลือก — ระบบจะไม่สร้างกิจกรรม');
-            return; // ❌ หยุดทำงานก่อน insert activity
-        }
-
-        // 2. แปลงเวลาเป็น ISO 8601
-        const [year, month, day] = activityDate.split('-').map(Number);
-        const [startHour, startMinute] = startTime.split(':').map(Number);
-        const [endHour, endMinute] = endTime.split(':').map(Number);
-
-        const startDateTime = new Date(year, month - 1, day, startHour, startMinute, 0);
-        const endDateTime = new Date(year, month - 1, day, endHour, endMinute, 0);
-
-        if (startDateTime >= endDateTime) {
-            alert('เวลาสิ้นสุดต้องมากกว่าเวลาเริ่มต้น');
+            alert("⚠️ ไม่มีนักเรียนตรงตามเงื่อนไข");
             return;
         }
 
-        const start_time_iso = startDateTime.toISOString();
-        const end_time_iso = endDateTime.toISOString();
+        // ---------------------------
+        //  แปลงเวลาเป็น ISO
+        // ---------------------------
+        const [y, m, d] = activityDate.split("-").map(Number);
+        const [sh, sm] = startTime.split(":").map(Number);
+        const [eh, em] = endTime.split(":").map(Number);
 
-        // 3. เตรียมข้อมูลกิจกรรม
-        const activityData = {
-            name: activityName,
-            start_time: start_time_iso,
-            end_time: end_time_iso,
-            for_student: true,
-            for_leader: true,
-            for_teacher: false,
-            is_recurring: (recurringDays > 0) ? recurringDays : null,
-            created_by: 1,
-            major_id: parseInt(majorId, 10)
-        };
+        const startISO = new Date(y, m - 1, d, sh, sm).toISOString();
+        const endISO = new Date(y, m - 1, d, eh, em).toISOString();
 
-        console.log('Activity Data to Insert:', activityData);
-
-        // 4. Insert activity
-        const { data: insertedActivity, error: insertError } = await supabaseClient
-            .from('activity')
-            .insert([activityData])
-            .select('id')
+        // ---------------------------
+        //  สร้าง activity
+        // ---------------------------
+        const { data: activity, error: activityError } = await supabaseClient
+            .from("activity")
+            .insert({
+                name: activityName,
+                start_time: startISO,
+                end_time: endISO,
+                major_id: majorId ? parseInt(majorId) : null,
+                for_student: true,
+                for_leader: true,
+                for_teacher: false,
+                is_recurring: recurringDays > 0 ? recurringDays : null,
+                created_by: 1,
+            })
+            .select("id")
             .single();
 
-        if (insertError) {
-            console.error('Supabase Insert Error:', insertError);
-            alert(`สร้างกิจกรรมไม่สำเร็จ: ${insertError.message}`);
+        if (activityError) {
+            console.error(activityError);
+            alert("สร้างกิจกรรมล้มเหลว");
             return;
         }
 
-        const activityId = insertedActivity.id;
-        console.log('✅ Activity Created with ID:', activityId);
+        const activityId = activity.id;
 
-        // 5. เตรียมข้อมูลสำหรับ activity_check
-        const academicYear = new Date(activityDate).getFullYear();
-        const checkRecords = students.map(s => ({
+        // ---------------------------
+        // สร้าง activity_check
+        // ---------------------------
+        const academicYear = new Date().getFullYear();
+
+        const checks = students.map(s => ({
             activity_id: activityId,
             student_id: s.id,
-            status: 'Absent',
+            status: "Absent",
             date: activityDate,
-            semester: semester,
+            semester,
             academic_year: academicYear
         }));
 
-        // 6. Insert activity_check ทั้งหมด
         const { error: checkError } = await supabaseClient
-            .from('activity_check')
-            .insert(checkRecords);
+            .from("activity_check")
+            .insert(checks);
 
         if (checkError) {
-            console.error('Error inserting activity_check:', checkError);
-            alert(`เกิดข้อผิดพลาดตอนเพิ่ม activity_check: ${checkError.message}`);
+            console.error(checkError);
+            alert("สร้าง activity_check ล้มเหลว");
         } else {
-            alert(`✅ สร้างกิจกรรม "${activityName}" และบันทึกนักเรียน ${students.length} คนสำเร็จแล้ว`);
+            alert(`✅ สร้างกิจกรรมสำเร็จ และเพิ่มนักเรียนทั้งหมด ${students.length} คน`);
             form.reset();
         }
 
-    } catch (e) {
-        console.error('Data Processing Error:', e);
-        alert('เกิดข้อผิดพลาดในการประมวลผลวันที่/เวลา');
+    } catch (err) {
+        console.error(err);
+        alert("เกิดข้อผิดพลาดภายในระบบ");
     }
 }
+
 
 // -------------------------------------------------------------
 // *โหลดข้อมูล Major ทั้งหมด*

@@ -131,22 +131,21 @@
             <div class="controls-row">
                 <div class="date-controls">
                     <label for="daySelect">วันที่</label>
-                    <select id="daySelect"><option value="6">6</option><option value="7" selected>7</option></select>
+                    <select id="daySelect">
+                    </select>
                     
                     <label for="monthSelect">เดือน</label>
                     <select id="monthSelect">
-                        <option value="11" selected>พฤศจิกายน</option>
-                        <option value="12">ธันวาคม</option>
                     </select>
 
                     <label for="yearSelect">ปี</label>
-                    <select id="yearSelect"><option value="2568" selected>2568</option></select>
+                    <select id="yearSelect"></select>
                 </div>
                 
-                <a href="#" class="export-button">
+                <button class="export-button" id="exportExcelBtn">
                     บันทึกเป็น Exsel
                     <i class="fas fa-external-link-alt"></i>
-                </a>
+                </button>
             </div>
 
             <table class="activity-table">
@@ -157,38 +156,15 @@
                         <th style="width: 20%;">สาขา</th>
                         <th class="status-cell" style="width: 15%;">สถานะเช็กชื่อ</th>
                         <th style="width: 15%;">สรุป</th>
-                        <th style="width: 5%;"><i class="fas fa-sync-alt" title="รีเฟรช"></i></th>
                     </tr>
                 </thead>
                 <tbody id="activityCheckTableBody">
-                    <tr>
-                        <td>หน้าเสาธง</td>
-                        <td>08:00-09:00</td>
-                        <td>ทั้งโรงเรียน</td>
-                        <td class="status-cell checked"><i class="fas fa-check-circle status-icon"></i>เช็กครบ</td>
-                        <td>95% เข้าร่วม</td>
-                        <td></td>
-                    </tr>
-                    <tr>
-                        <td>กิจกรรมสาขาคอมฯ</td>
-                        <td>13:00-15:00</td>
-                        <td>คอมพิวเตอร์</td>
-                        <td class="status-cell partial"><i class="fas fa-exclamation-triangle status-icon"></i>ยังไม่ครบ</td>
-                        <td>72% เข้าร่วม</td>
-                        <td></td>
-                    </tr>
-                    <tr>
-                        <td>กิจกรรมไฟฟ้า</td>
-                        <td>09:00-11:00</td>
-                        <td>ไฟฟ้า</td>
-                        <td class="status-cell unchecked"><i class="fas fa-times-circle status-icon"></i>ยังไม่เช็ก</td>
-                        <td>—</td>
-                        <td></td>
-                    </tr>
+                    <!-- กิจกรรมจะถูกโหลดที่นี่โดย JavaScript -->
                 </tbody>
             </table>
         </div>
     </div>
-    
+    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+
     </body>
 </html>
