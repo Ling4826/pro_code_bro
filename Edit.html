@@ -8,6 +8,20 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/th.js"></script>
+    <script>
+    // 💡 เพิ่ม Flatpickr สำหรับ Time Picker ที่นี่ (สำหรับ .flatpickr-time)
+    flatpickr(".flatpickr-time", {
+        enableTime: true,
+        noCalendar: true,
+        time_24hr: true,
+        dateFormat: "H:i", // รูปแบบข้อมูลที่ส่งกลับ
+        altInput: true,
+        altFormat: "H:i น.", // รูปแบบที่แสดงผล (มี "น.")
+        minuteIncrement: 1,
+        locale: "th" // ใช้ภาษาไทย
+    });
+</script>
 
     <style>
         /* CSS เฉพาะสำหรับหน้านี้ (ใช้โค้ดเดิมที่คุณสร้างไว้) */
@@ -466,12 +480,12 @@ input[type="radio"]:checked + label.late-btn::after {
     </style>
 </head>
 <body>
-    <div class="header">
-        <div class="logo-area">
-            <img src="https://example.com/pbntc-logo.png" alt="PBNTC Logo" class="logo">
-            PBNTC
+   <div class="header">
+            <div class="logo-area">
+                <img src="pbntc-logo.png" alt="PBNTC Logo" class="logo">
+                PBNTC
+            </div>
         </div>
-    </div>
     
     <div class="main-container">
         <div class="sidebar">
@@ -506,20 +520,27 @@ input[type="radio"]:checked + label.late-btn::after {
                         </div>
                     </div>
 
-                    <div class="form-group" style="flex: 2;">
-                        <label class="required">เวลา</label>
-                        <div class="time-group">
+                     <div class="form-group">
+                            <label for="startTime" class="required">เวลาเริ่ม</label>
                             <div class="input-icon-group">
-                                <input type="time" id="startTime" name="startTime" required>
+                                <input type="text" id="startTime"
+                                    name="startTime" required
+                                    class="flatpickr-time"
+                                    placeholder="เลือกเวลาเริ่ม">
                                 <i class="fas fa-clock"></i>
                             </div>
-                            <span>*ถึง</span>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="endTime" class="required">เวลาสิ้นสุด</label>
                             <div class="input-icon-group">
-                                <input type="time" id="endTime" name="endTime" required>
-                                <i class="fas fa-check"></i>
+                                <input type="text" id="endTime"
+                                    name="endTime" required
+                                    class="flatpickr-time"
+                                    placeholder="เลือกเวลาสิ้นสุด">
+                                <i class="fas fa-clock"></i>
                             </div>
                         </div>
-                    </div>
                 </div>
 
                 <div class="form-row">
@@ -624,6 +645,8 @@ const activityId = params.get('activityId');
 /* ====== HELPERS ====== */
 const $ = sel => document.querySelector(sel);
 const $$ = sel => Array.from(document.querySelectorAll(sel));
+let allMajors = []; // เก็บข้อมูลสาขาที่โหลดมาทั้งหมด
+let allClassesData = []; // เก็บข้อมูล Class ทั้งหมด
 
 function setValue(id, value) {
     const el = document.getElementById(id);
@@ -637,7 +660,8 @@ function formatDateToDisplay(d) {
 }
 function formatTimeISO(d) {
     if (!d) return '';
-    return new Date(d).toISOString().slice(11,16);
+    // 💡 การแก้ไข: ส่งค่าเป็น HH:MM (ซึ่งเป็น dateFormat)
+    return new Date(d).toISOString().slice(11,16); 
 }
 function pad(n) { return String(n).padStart(2,'0'); }
 
@@ -694,7 +718,61 @@ async function loadStudentYears(majorId) {
         return [];
     }
 }
+async function fetchAllMajorsAndClasses() {
+    const { data: majors, error: majorError } = await supabaseCilent
+        .from('major')
+        .select('id, name, level');
+    if (majorError) { console.error('Error fetching majors:', majorError.message); return []; }
+    allMajors = majors;
+    
+    // ดึง Classes ทั้งหมด (สำหรับการอัปเดต Dropdown ปี/ห้อง)
+    const { data: classes, error: classError } = await supabaseCilent
+        .from('class')
+        .select('id, class_name, major_id, year, class_number');
+    if (classError) { console.error('Error fetching classes:', classError.message); return []; }
+    allClassesData = classes;
+}
+function updateDepartmentOptions(selectedLevel, currentMajorId) {
+    const departmentSelect = document.getElementById('department');
+    departmentSelect.innerHTML = '<option value="">เลือกสาขา</option>';
 
+    if (!selectedLevel) return;
+
+    const filteredMajors = allMajors.filter(m => m.level === selectedLevel);
+    filteredMajors.forEach(m => {
+        const option = document.createElement('option');
+        option.value = m.id;
+        option.textContent = m.name;
+        if (m.id === currentMajorId) {
+            option.selected = true;
+        }
+        departmentSelect.appendChild(option);
+    });
+}
+function updateYearOptions(selectedLevel, currentYear) {
+    const yearSelect = document.getElementById('studentYear');
+    yearSelect.innerHTML = '<option value="">เลือกปี</option>';
+
+    if (!selectedLevel) return;
+
+    // Hardcode ปีตามหลักสูตร (ปวช: 1,2,3 / ปวส: 1,2)
+    let years = [];
+    if (selectedLevel === 'ปวช.') {
+        years = [1, 2, 3];
+    } else if (selectedLevel === 'ปวส.') {
+        years = [1, 2];
+    }
+
+    years.forEach(y => {
+        const option = document.createElement('option');
+        option.value = y;
+        option.textContent = y;
+        if (y === currentYear) {
+            option.selected = true;
+        }
+        yearSelect.appendChild(option);
+    });
+}
 async function loadClassesFor(majorId, year) {
     if (!majorId || !year) return [];
     try {
@@ -840,9 +918,9 @@ async function loadActivity() {
 
         // set time fields (ISO->hh:mm)
         setValue('startTime', activity.start_time ? formatTimeISO(activity.start_time) : '');
-        setValue('endTime', activity.end_time ? formatTimeISO(activity.end_time) : '');
+    setValue('endTime', activity.end_time ? formatTimeISO(activity.end_time) : '');
         setValue('recurringDays', activity.is_recurring ? 1 : 0);
-
+        await fetchAllMajorsAndClasses();
         // load majors list and select
         await loadMajorList(activity.major?.id);
         if (activity.major) {
@@ -868,6 +946,20 @@ async function loadActivity() {
             if (years.length > 0) yearSelect.value = years[0];
             // also load classes for default selection
             await fetchStudentClass(); // will read current department/year
+        }
+        if (majorData) {
+            setValue('level', majorData.level || '');
+            
+            // 💡 ใช้ฟังก์ชันใหม่ในการ Populate Dropdown
+            updateDepartmentOptions(majorData.level, majorData.id); // Populate Major และเลือกค่าเดิม
+            updateYearOptions(majorData.level, initialYear); // Populate Year และเลือกค่าเดิม
+
+            // 💡 โหลดห้อง (Class) และเลือกห้องเดิม
+            await fetchStudentClass(initialClassId); 
+        } else {
+            // ถ้าไม่มี major_id ให้โหลด Dropdown ว่าง
+            updateDepartmentOptions('', null);
+            updateYearOptions('', null);
         }
 
         // load attendance rows
@@ -903,28 +995,28 @@ async function fetchStudentYear() {
     }
 }
 
-async function fetchStudentClass() {
-    const majorId = document.getElementById('department')?.value;
-    const year = document.getElementById('studentYear')?.value;
-
+async function fetchStudentClass(currentClassId = null) {
+    const majorId = document.getElementById('department').value;
+    const year = document.getElementById('studentYear').value;
     const classSelect = document.getElementById('studentClass');
-    classSelect.innerHTML = `<option value="">เลือกห้อง</option>`;
+    classSelect.innerHTML = '<option value="">เลือกห้อง</option>';
 
-    if (!majorId || !year) {
-        return;
-    }
+    if (!majorId || !year) return;
+    
+    // กรองจากข้อมูล Classes ที่ดึงมาทั้งหมด
+    const filteredClasses = allClassesData.filter(c => 
+        c.major_id.toString() === majorId.toString() && c.year.toString() === year.toString()
+    );
 
-    try {
-        const classes = await loadClassesFor(majorId, year);
-        classes.forEach(c => {
-            const option = document.createElement('option');
-            option.value = c.id;
-            option.textContent = c.class_name ? c.class_name : `ห้อง ${c.class_number}`;
-            classSelect.appendChild(option);
-        });
-    } catch (err) {
-        console.error('fetchStudentClass error', err);
-    }
+    filteredClasses.forEach(c => {
+        const option = document.createElement('option');
+        option.value = c.id;
+        option.textContent = c.class_name ? c.class_name : `ห้อง ${c.class_number}`;
+        if (c.id.toString() === currentClassId?.toString()) {
+            option.selected = true;
+        }
+        classSelect.appendChild(option);
+    });
 }
 
 /* ====== FORM SUBMIT ====== */
@@ -1020,6 +1112,22 @@ if (form) {
 /* ====== INIT ====== */
 document.addEventListener('DOMContentLoaded', async () => {
     // wire events
+    document.getElementById('level')?.addEventListener('change', async (e) => {
+        // เมื่อ Level เปลี่ยน: อัปเดต Years และ Classes
+        const majorId = document.getElementById('department').value;
+        const years = await loadStudentYears(majorId);
+        const yearSelect = $('#studentYear');
+        yearSelect.innerHTML = `<option value="">เลือกปี</option>`;
+        years.forEach(y => {
+            const opt = document.createElement('option');
+            opt.value = y;
+            opt.textContent = y;
+            yearSelect.appendChild(opt);
+        });
+        // ตั้งค่า Year ให้เป็นค่าว่างหรือเลือกค่าแรกที่เหมาะสม
+        await fetchStudentClass();
+    });
+
     document.getElementById('department')?.addEventListener('change', async (e) => {
         // when department change -> reload years and classes
         const majorId = e.target.value;
@@ -1035,12 +1143,29 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (years.length > 0) yearSelect.value = years[0];
         await fetchStudentClass();
     });
+    document.getElementById('studentYear')?.addEventListener('change', fetchStudentClass);
+    
+    // 💡 เพิ่ม Listener สำหรับ Level (ถ้ายังไม่มี) และ Class Number
+    // (ส่วนนี้อาจซ้ำซ้อนกับโค้ดที่คุณมีอยู่ โปรดตรวจสอบว่ามีเพียงชุดเดียว)
+    document.getElementById('level')?.addEventListener('change', async () => {
+        // เมื่อ Level เปลี่ยน: ต้องโหลด MajorList ใหม่ทั้งหมด
+        const majorSelect = document.getElementById('department');
+        await loadMajorList(majorSelect.value); // โหลด Major ใหม่ตาม Level
+        // เรียก Department change เพื่ออัปเดต Year/Class ต่อไป
+        majorSelect.dispatchEvent(new Event('change')); 
+    });
+    
+    document.getElementById('studentClass')?.addEventListener('change', async () => {
+        // เมื่อ Class เปลี่ยน: ไม่ต้องทำอะไรในหน้านี้ (แค่กรองนักเรียน แต่เราไม่ได้กรองในหน้านี้)
+    });
 
     document.getElementById('studentYear')?.addEventListener('change', fetchStudentClass);
 
     // initial loading
     await loadActivity();
 });
+
+
 </script>
 
 
