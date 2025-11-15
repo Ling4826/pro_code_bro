@@ -117,12 +117,14 @@ async function RenderTable(activities) {
         const totalStudents = allStudents.length;
 
         // เช็กจำนวนคนที่เข้าร่วม
-        const attendedCount = act.check?.filter(c => c.status === "Attended").length || 0;
+        const attendedCount = act.check ? act.check.filter(c => c.status === "Attended").length : 0;
 
         // คำนวณ %
         const percent = totalStudents > 0 ? Math.round((attendedCount / totalStudents) * 100) : 0;
 
-        const statusChecks = attendedCount === totalStudents ? "เช็กครบ" : "ยังไม่ครบ";
+        const statusChecks = !act.check || act.check.length === 0? "ยังไม่เช็ก": (attendedCount === totalStudents ? "เช็กครบ" : "ยังไม่ครบ");
+    
+    
 
         const row = `
         <tr>
