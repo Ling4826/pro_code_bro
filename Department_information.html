@@ -9,7 +9,6 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@1/dist/umd/supabase.js"></script>
 <script src="department_script.js"></script>
   <style>
-    /* CSS เฉพาะที่ต้องใช้ (ถ้ามี) แต่ส่วนใหญ่ถูกย้ายไป style.css แล้ว */
     .filter-controls select {
         width: 200px;
     }
@@ -58,9 +57,6 @@
     <label for="studentYear">ชั้นปี</label>
     <select id="studentYear" class="filter-select">
         <option value="">เลือกชั้นปี</option>
-        <option value="1">ปี 1</option>
-        <option value="2">ปี 2</option>
-        <option value="3">ปี 3</option>
     </select>
     
     <label for="department">สาขา</label>
@@ -70,9 +66,6 @@
     <label for="classNumber">ห้อง</label>
     <select id="classNumber" class="filter-select">
         <option value="">เลือกห้อง</option>
-        <option value="1">ห้อง 1</option>
-        <option value="2">ห้อง 2</option>
-        <option value="3">ห้อง 3</option>
     </select>
 </div>
 
@@ -80,6 +73,7 @@
             <thead>
                 <tr>
                     <th>ชื่อ</th>
+                    <th>ระดับ</th>
                     <th>ชั้นปี</th>
                     <th>ห้อง</th>
                     <th>รหัสนักศึกษา</th>
