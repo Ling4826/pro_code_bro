@@ -146,7 +146,7 @@ async function handleCreateActivity(event) {
         const checks = students.map(s => ({
             activity_id: activityId,
             student_id: s.id,
-            status: 'Pending', // กำหนดสถานะเริ่มต้น
+            status: null, // กำหนดสถานะเริ่มต้น
             date: insertDate,
             semester,
             academic_year: academicYear,
