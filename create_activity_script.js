@@ -6,43 +6,8 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // -------------------------------------------------------------
-// *โหลดปีของนักเรียน*
-// -------------------------------------------------------------
-async function fetchStudentYear() {
-    console.log('Fetching Years from class join...');
-
-    // ดึงข้อมูลปีของนักเรียนจาก class
-    const { data: studentYears, error } = await supabaseClient
-        .from('student')
-        .select('class:class_id (year)') // join กับ class
-        //.eq('class.major_id', someMajorId) // ถ้าต้องการกรองสาขา
-        ;
-
-    const yearSelect = document.getElementById('studentYear');
-    yearSelect.innerHTML = '<option value="">เลือกปี</option>';
-
-    if (error) {
-        console.error('Error fetching Years:', error.message);
-        return;
-    }
-
-    if (studentYears && studentYears.length > 0) {
-        // ดึงค่า year จาก class แล้วทำให้ unique
-        const uniqueYears = [...new Set(studentYears.map(s => s.class.year))].sort();
-        uniqueYears.forEach(y => {
-            const option = document.createElement('option');
-            option.value = y;
-            option.textContent = y;
-            yearSelect.appendChild(option);
-        });
-        console.log(`Years loaded successfully: ${uniqueYears.length} items`);
-    } else {
-        console.warn('No year data found');
-    }
-}
-
-// -------------------------------------------------------------
 // *ฟังก์ชันจัดการ Form Submission*
+// (ส่วนนี้ไม่มีการแก้ไข)
 // -------------------------------------------------------------
 async function handleCreateActivity(event) {
     event.preventDefault();
@@ -97,6 +62,8 @@ async function handleCreateActivity(event) {
         }
 
         // ถ้าเลือก year → กรองตาม class.year
+        // **หมายเหตุ: ตรงนี้ใช้ class.year ที่อ้างอิงจากตาราง class ซึ่งอาจเป็น 1, 2, 3**
+        // หากต้องการอ้างอิงจากข้อมูลปีที่เป็น 1, 2 สำหรับ ปวส. ต้องมั่นใจว่า class.year ถูก set ตามนั้น
         if (studentYear) {
             classQuery = classQuery.eq("year", parseInt(studentYear));
         }
@@ -129,10 +96,15 @@ async function handleCreateActivity(event) {
         // ------------------------------------------------
         // 4️⃣ แปลงวันที่เป็น ISO format
         // ------------------------------------------------
-        const [y, m, d] = activityDate.split("-").map(Number);
+        // เนื่องจาก `activityDate` มาในรูปแบบ YYYY-MM-DD
+        const dateParts = activityDate.split("-").map(Number);
+        const [y, m, d] = dateParts.length === 3 ? dateParts : [new Date().getFullYear(), new Date().getMonth() + 1, new Date().getDate()];
+        
         const [sh, sm] = startTime.split(":").map(Number);
         const [eh, em] = endTime.split(":").map(Number);
 
+        // สร้าง Date object โดยใช้ Date (year, monthIndex, day, hours, minutes)
+        // monthIndex คือ 0-11, ดังนั้นต้องลบ 1 ออกจากเดือน
         const startISO = new Date(y, m - 1, d, sh, sm).toISOString();
         const endISO = new Date(y, m - 1, d, eh, em).toISOString();
 
@@ -145,12 +117,14 @@ async function handleCreateActivity(event) {
                 name: activityName,
                 start_time: startISO,
                 end_time: endISO,
-                major_id: majorId ? parseInt(majorId) : null,
+                // major_id จะถูกใส่เฉพาะเมื่อมีการเลือกสาขาใน dropdown เท่านั้น
+                major_id: majorId ? parseInt(majorId) : null, 
                 for_student: true,
                 for_leader: true,
                 for_teacher: false,
                 is_recurring: recurringDays > 0,
-                created_by: 1,
+                // **สมมติว่าผู้สร้างคือ created_by: 1 (Admin/Teacher)**
+                created_by: 1, 
             })
             .select("id")
             .single();
@@ -162,12 +136,18 @@ async function handleCreateActivity(event) {
         // ------------------------------------------------
         // 6️⃣ สร้าง activity_check
         // ------------------------------------------------
-        const academicYear = new Date().getFullYear();
+        const currentYear = new Date().getFullYear();
+        // หากต้องการปีการศึกษาไทย (พ.ศ.) ให้ใช้ currentYear + 543
+        const academicYear = currentYear + 543; 
+        
+        // ตรวจสอบว่า `activityDate` เป็นรูปแบบ 'YYYY-MM-DD'
+        const insertDate = activityDate.split(' ').length > 1 ? activityDate.split(' ')[0] : activityDate;
+        
         const checks = students.map(s => ({
             activity_id: activityId,
             student_id: s.id,
-            status: null,
-            date: activityDate,
+            status: 'Pending', // กำหนดสถานะเริ่มต้น
+            date: insertDate,
             semester,
             academic_year: academicYear,
         }));
@@ -211,14 +191,23 @@ async function fetchAllMajors() {
 }
 
 // -------------------------------------------------------------
-// *อัปเดต dropdown สาขาตามระดับที่เลือก*
+// *อัปเดต dropdown สาขาและปีตามระดับที่เลือก*
 // -------------------------------------------------------------
-function updateDepartmentOptions(selectedLevel, majors) {
+function handleLevelChange(selectedLevel, majors) {
     const departmentSelect = document.getElementById('department');
+    const yearSelect = document.getElementById('studentYear');
+    
+    // 1. Reset dropdown
     departmentSelect.innerHTML = '<option value="">เลือกสาขา</option>';
+    yearSelect.innerHTML = '<option value="">เลือกปี</option>';
 
-    let filteredMajors = majors.filter(m => m.level === selectedLevel);
-    if (filteredMajors.length === 0) filteredMajors = majors;
+    if (!selectedLevel) {
+        // ถ้าไม่ได้เลือกระดับ ให้จบการทำงาน
+        return;
+    }
+
+    // 2. กรองและแสดงสาขาตามระดับที่เลือก
+    const filteredMajors = majors.filter(m => m.level === selectedLevel);
 
     filteredMajors.forEach(m => {
         const option = document.createElement('option');
@@ -226,23 +215,48 @@ function updateDepartmentOptions(selectedLevel, majors) {
         option.textContent = m.name;
         departmentSelect.appendChild(option);
     });
+
+    // 3. กำหนดตัวเลือกปีตามระดับ (Hardcode ตามหลักสูตร)
+    let years = [];
+    if (selectedLevel === 'ปวช.') {
+        // ปวช. มี 3 ปี
+        years = [1, 2, 3]; 
+    } else if (selectedLevel === 'ปวส.') {
+        // ปวส. มี 2 ปี
+        years = [1, 2]; 
+    }
+    
+    years.forEach(y => {
+        const option = document.createElement('option');
+        // ใช้ year 3 สำหรับ ปวส. ถ้า class.year ใน DB ถูกตั้งค่าเป็น 3 ทั้งหมด
+        // แต่ในโค้ดเดิมใช้ year 1, 2 ใน CTE และมีการ Join กับ class.year
+        // ดังนั้นเพื่อให้ UI ตรงกับข้อมูลที่ควรจะเป็นสำหรับ ปวส. (ปี 1 และ ปี 2) ให้ใช้ค่า 1, 2
+        option.value = y; 
+        option.textContent = y;
+        yearSelect.appendChild(option);
+    });
 }
 
 // -------------------------------------------------------------
 // *เริ่มต้นเมื่อ DOM โหลดเสร็จ*
 // -------------------------------------------------------------
 document.addEventListener('DOMContentLoaded', async () => {
+    // 1. โหลดข้อมูลสาขาทั้งหมด
     const allMajors = await fetchAllMajors();
-    await fetchStudentYear();
+    
+    // **ลบ: fetchStudentYear();** -> ไม่จำเป็นแล้ว
+    // **เนื่องจากเรา hardcode ตัวเลือกปีใน handleLevelChange()**
 
     const levelSelect = document.getElementById('level');
     if (levelSelect) {
         levelSelect.addEventListener('change', () => {
             const selectedLevel = levelSelect.value;
-            updateDepartmentOptions(selectedLevel, allMajors);
+            // เรียกใช้ฟังก์ชันใหม่
+            handleLevelChange(selectedLevel, allMajors);
         });
     }
-
+    
+    // ตั้งค่า Flatpickr เหมือนเดิม
     flatpickr(".flatpickr-thai", {
         locale: "th",
         dateFormat: "Y-m-d",
