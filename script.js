@@ -150,12 +150,12 @@ async function fetchActivities() {
             start_time,
             end_time,
             is_recurring,
-            class:class_id ( 
-                id, 
-                class_number, 
+            class:class_id (
+                id,
+                class_number,
                 year,
                 major:major_id (id, name, level)
-            ) 
+            )
         `)
         .order('start_time', { ascending: true });
 

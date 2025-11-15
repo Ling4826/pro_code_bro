@@ -8,13 +8,29 @@ async function fetchActivities() {
     const { data: activities, error } = await supabaseClient
         .from('activity')
         .select(`
-        id,
-        name,
-        start_time,
-        end_time,
-        is_recurring,
-        major:major_id(name, level),
-        check:activity_check(id, student_id, status, date)
+            id,
+            name,
+            start_time,
+            end_time,
+            is_recurring,
+            class:class_id (
+                id,
+                year,
+                class_number,
+                major:major_id (
+                    id,
+                    name,
+                    level
+                )
+            ),
+            check:activity_check (
+                id,
+                student_id,
+                status,
+                date,
+                semester,
+                academic_year
+            )
         `)
         .order('start_time', { ascending: true });
 
@@ -23,9 +39,12 @@ async function fetchActivities() {
         container.innerHTML = '<p>ไม่สามารถดึงรายการกิจกรรมได้</p>';
         return;
     }
+
+    console.log("Activities:", activities);
+
     document.getElementById("exportExcelBtn")
-    .addEventListener("click", () => exportToExcel(activities));
-    console.log('Activities:', activities);
+        .addEventListener("click", () => exportToExcel(activities));
+
     LoadDate(activities);
     setupFilters(activities);
     RenderTable(activities);
@@ -108,77 +127,82 @@ async function RenderTable(activities) {
         const startTime = formatTime(act.start_time);
         const endTime = formatTime(act.end_time);
 
+        const major = act.class?.major?.name ?? null;
+        const level = act.class?.major?.level ?? null;
+        const year = act.class?.year ?? null;
+
         let totalStudents = 0;
+        let attendedCount = 0;
         let displayText = "";
 
         console.log("=== Activity ===");
-        console.log("Activity:", act.name, "Major:", act.major?.name, "Level:", act.major?.level, "Semester:", act.semester, "Academic Year:", act.academic_year);
+        console.log("Activity:", act.name, "Major:", major, "Level:", level, "Year:", year);
 
-        if (!act.major || !act.major.level) {
-            // major หรือ level เป็น null → ใช้ % ของคนทั้งหมด
+        if (!major || !level || !year) {
+            // === MODE: ทั้งโรงเรียน ===
             const { data: allStudents } = await supabaseClient
                 .from('student')
                 .select('id');
+
             totalStudents = (allStudents || []).length;
 
-            const attendedCount = act.check ? act.check.filter(c => c.status === "Attended").length : 0;
-            const percent = totalStudents > 0 ? Math.round((attendedCount / totalStudents) * 100) : 0;
+            // count attended
+            attendedCount = act.check
+                ? act.check.filter(c => c.status === "Attended").length
+                : 0;
+
+            const percent = totalStudents > 0
+                ? Math.round((attendedCount / totalStudents) * 100)
+                : 0;
 
             displayText = `${percent}% เข้าร่วม`;
 
-            console.log("All students:", totalStudents, "Attended:", attendedCount, "Percent:", percent);
+            console.log("Mode: ทั้งโรงเรียน");
+            console.log("Total:", totalStudents, "Attended:", attendedCount);
         } else {
-            // major และ level มีค่า → ใช้จำนวนคนจาก class ของ major + year
-            const levelToYear = act.major.level === 'ปวช.' ? 1 : 4; // mapping level -> year
-            const { data: classes } = await supabaseClient
+            // === MODE: ตาม major + year ===
+            const { data: classList } = await supabaseClient
                 .from('class')
                 .select('id')
-                .eq('major_id', act.major.id)
-                .eq('year', levelToYear);
+                .eq('major_id', act.class.major.id)
+                .eq('year', year);
 
-            console.log("Classes found:", classes);
+            const classIds = classList?.map(c => c.id) || [];
 
-            let studentsInClass = [];
-            if (classes && classes.length > 0) {
-                const classIds = classes.map(c => c.id);
+            const { data: students } = await supabaseClient
+                .from('student')
+                .select('id')
+                .in('class_id', classIds);
 
-                const { data: students } = await supabaseClient
-                    .from('student')
-                    .select('id')
-                    .in('class_id', classIds);
-
-                studentsInClass = students || [];
-            }
-
-            console.log("Students in class:", studentsInClass);
+            const studentsInClass = students || [];
 
             totalStudents = studentsInClass.length;
 
-            const attendedCount = act.check
+            attendedCount = act.check
                 ? act.check.filter(c =>
-                    studentsInClass.some(s => s.id === c.student_id) &&
-                    c.semester === act.semester &&
-                    c.academic_year === act.academic_year &&
-                    c.status === "Attended"
+                    studentsInClass.some(s => s.id === c.student_id)
                 ).length
                 : 0;
 
-            console.log("Attended count:", attendedCount, "Total students:", totalStudents);
-
             displayText = `${attendedCount} / ${totalStudents} คน`;
+
+            console.log("Mode: ตามแผนก");
+            console.log("Students:", totalStudents, "Attended:", attendedCount);
         }
 
-        // สถานะเช็กชื่อ
-        const attendedCountOverall = act.check ? act.check.filter(c => c.status === "Attended").length : 0;
-        const statusChecks = !act.check || act.check.length === 0
-            ? "ยังไม่เช็ก"
-            : (attendedCountOverall === totalStudents ? "เช็กครบ" : "ยังไม่ครบ");
+        // === สถานะเช็กชื่อ ===
+        const statusChecks =
+            !act.check || act.check.length === 0
+                ? "ยังไม่เช็ก"
+                : attendedCount === totalStudents
+                    ? "เช็กครบ"
+                    : "ยังไม่ครบ";
 
         const row = `
         <tr>
             <td>${act.name}</td>
             <td>${startTime} - ${endTime}</td>
-            <td>${act.major?.name ?? 'ทั้งโรงเรียน'}</td>
+            <td>${major ?? 'ทั้งโรงเรียน'}</td>
             <td class="status-cell ${statusChecks === "เช็กครบ" ? "checked" : "unchecked"}">
                 ${statusChecks}
             </td>
@@ -189,6 +213,8 @@ async function RenderTable(activities) {
         container.innerHTML += row;
     }
 }
+
+
 
 
 
