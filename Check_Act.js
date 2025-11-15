@@ -113,7 +113,7 @@ async function RenderTable(activities) {
             .from('student')
             .select('id')
             .match(act.major ? { major_id: act.major.id } : {}); // ถ้า major มีค่า filter, ถ้า null = ทั้งโรงเรียน
-
+        allStudents = allStudents || [];
         const totalStudents = allStudents.length;
 
         // เช็กจำนวนคนที่เข้าร่วม
