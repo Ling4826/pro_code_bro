@@ -9,26 +9,36 @@ const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 // *โหลดปีของนักเรียน*
 // -------------------------------------------------------------
 async function fetchStudentYear() {
-    console.log('Fetching Years...');
+    console.log('Fetching Years from class join...');
 
-    const { data: years, error } = await supabaseClient
+    // ดึงข้อมูลปีของนักเรียนจาก class
+    const { data: studentYears, error } = await supabaseClient
         .from('student')
-        .select('year');
-        
+        .select('class:class_id (year)') // join กับ class
+        //.eq('class.major_id', someMajorId) // ถ้าต้องการกรองสาขา
+        ;
+
     const yearSelect = document.getElementById('studentYear');
+    yearSelect.innerHTML = '<option value="">เลือกปี</option>';
+
     if (error) {
         console.error('Error fetching Years:', error.message);
         return;
     }
 
-    if (years?.length) {
-    const uniqueYears = [...new Set(years.map(s => s.year))].sort();
-    yearSelect.innerHTML += uniqueYears
-        .map(y => `<option value="${y}">${y}</option>`)
-        .join("");
-    console.log(`Years loaded successfully: ${uniqueYears.length} items`);
-}
-
+    if (studentYears && studentYears.length > 0) {
+        // ดึงค่า year จาก class แล้วทำให้ unique
+        const uniqueYears = [...new Set(studentYears.map(s => s.class.year))].sort();
+        uniqueYears.forEach(y => {
+            const option = document.createElement('option');
+            option.value = y;
+            option.textContent = y;
+            yearSelect.appendChild(option);
+        });
+        console.log(`Years loaded successfully: ${uniqueYears.length} items`);
+    } else {
+        console.warn('No year data found');
+    }
 }
 
 // -------------------------------------------------------------
@@ -50,46 +60,75 @@ async function handleCreateActivity(event) {
     const majorId = form.department.value || "";
     const studentYear = form.studentYear.value || "";
 
-    // เช็กเฉพาะฟิลด์ที่จำเป็นจริงๆ
     if (!activityName || !activityDate || !startTime || !endTime || !semester) {
         alert('กรุณากรอกข้อมูลที่จำเป็น (*) ให้ครบถ้วน');
         return;
     }
 
     try {
-        // ----------------------
-        //  สร้าง Query ของ student
-        // ----------------------
-        let studentQuery = supabaseClient
-            .from('student')
-            .select('id');
+        // ------------------------------------------------
+        // 1️⃣ ดึง major ตาม level (ถ้าเลือก level)
+        // ------------------------------------------------
+        let majorIdsFromLevel = [];
 
-        //  ถ้าทั้ง 3 ฟิลเตอร์ว่าง → ดึงนักเรียนทั้งหมด
-        if (!level && !majorId && !studentYear) {
-            console.log("📌 ดึงนักเรียนทั้งหมด (ไม่กรอง)");
-        } else {
-            // กรองเฉพาะฟิลด์ที่มีค่า
-            if (level) studentQuery = studentQuery.eq('level', level);
-            if (majorId) studentQuery = studentQuery.eq('major_id', parseInt(majorId));
-            if (studentYear) studentQuery = studentQuery.eq('year', parseInt(studentYear));
+        if (level) {
+            const { data: majors, error: majorError } = await supabaseClient
+                .from("major")
+                .select("id")
+                .eq("level", level);
+
+            if (majorError) throw majorError;
+
+            majorIdsFromLevel = majors.map(m => m.id);
         }
 
-        const { data: students, error: studentError } = await studentQuery;
+        // ------------------------------------------------
+        // 2️⃣ Query class ตาม major_id, level, year
+        // ------------------------------------------------
+        let classQuery = supabaseClient.from("class").select("id, major_id, year");
 
-        if (studentError) {
-            console.error(studentError);
-            alert("ดึงข้อมูลนักเรียนล้มเหลว");
+        // ถ้าเลือก major → ใช้ major โดยตรง
+        if (majorId) {
+            classQuery = classQuery.eq("major_id", parseInt(majorId));
+        }
+        // ถ้าไม่เลือก major แต่เลือก level → ใช้ majorIds จาก level
+        else if (majorIdsFromLevel.length > 0) {
+            classQuery = classQuery.in("major_id", majorIdsFromLevel);
+        }
+
+        // ถ้าเลือก year → กรองตาม class.year
+        if (studentYear) {
+            classQuery = classQuery.eq("year", parseInt(studentYear));
+        }
+
+        const { data: classes, error: classError } = await classQuery;
+        if (classError) throw classError;
+
+        if (!classes || classes.length === 0) {
+            alert("⚠️ ไม่พบ class ตามเงื่อนไขที่เลือก");
             return;
         }
+
+        const classIds = classes.map(c => c.id);
+
+        // ------------------------------------------------
+        // 3️⃣ ดึง student จาก class_id
+        // ------------------------------------------------
+        const { data: students, error: studentError } = await supabaseClient
+            .from("student")
+            .select("id, class_id")
+            .in("class_id", classIds);
+
+        if (studentError) throw studentError;
 
         if (!students || students.length === 0) {
-            alert("⚠️ ไม่มีนักเรียนตรงตามเงื่อนไข");
+            alert("⚠️ ไม่มีนักเรียนในคลาสตามที่เลือก");
             return;
         }
 
-        // ---------------------------
-        //  แปลงเวลาเป็น ISO
-        // ---------------------------
+        // ------------------------------------------------
+        // 4️⃣ แปลงวันที่เป็น ISO format
+        // ------------------------------------------------
         const [y, m, d] = activityDate.split("-").map(Number);
         const [sh, sm] = startTime.split(":").map(Number);
         const [eh, em] = endTime.split(":").map(Number);
@@ -97,9 +136,9 @@ async function handleCreateActivity(event) {
         const startISO = new Date(y, m - 1, d, sh, sm).toISOString();
         const endISO = new Date(y, m - 1, d, eh, em).toISOString();
 
-        // ---------------------------
-        //  สร้าง activity
-        // ---------------------------
+        // ------------------------------------------------
+        // 5️⃣ สร้าง activity
+        // ------------------------------------------------
         const { data: activity, error: activityError } = await supabaseClient
             .from("activity")
             .insert({
@@ -110,51 +149,46 @@ async function handleCreateActivity(event) {
                 for_student: true,
                 for_leader: true,
                 for_teacher: false,
-                is_recurring: recurringDays > 0 ? recurringDays : null,
+                is_recurring: recurringDays > 0,
                 created_by: 1,
             })
             .select("id")
             .single();
 
-        if (activityError) {
-            console.error(activityError);
-            alert("สร้างกิจกรรมล้มเหลว");
-            return;
-        }
+        if (activityError) throw activityError;
 
         const activityId = activity.id;
 
-        // ---------------------------
-        // สร้าง activity_check
-        // ---------------------------
+        // ------------------------------------------------
+        // 6️⃣ สร้าง activity_check
+        // ------------------------------------------------
         const academicYear = new Date().getFullYear();
-
         const checks = students.map(s => ({
             activity_id: activityId,
             student_id: s.id,
-            status: "Absent",
+            status: null,
             date: activityDate,
             semester,
-            academic_year: academicYear
+            academic_year: academicYear,
         }));
 
         const { error: checkError } = await supabaseClient
             .from("activity_check")
             .insert(checks);
 
-        if (checkError) {
-            console.error(checkError);
-            alert("สร้าง activity_check ล้มเหลว");
-        } else {
-            alert(`✅ สร้างกิจกรรมสำเร็จ และเพิ่มนักเรียนทั้งหมด ${students.length} คน`);
-            form.reset();
-        }
+        if (checkError) throw checkError;
+
+        alert(`✅ สร้างกิจกรรมสำเร็จ และเพิ่มนักเรียนทั้งหมด ${students.length} คน`);
+        form.reset();
 
     } catch (err) {
         console.error(err);
-        alert("เกิดข้อผิดพลาดภายในระบบ");
+        alert("เกิดข้อผิดพลาด: " + (err.message || JSON.stringify(err)));
     }
 }
+
+
+
 
 
 // -------------------------------------------------------------
