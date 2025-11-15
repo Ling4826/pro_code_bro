@@ -19,7 +19,7 @@ async function handleCreateActivity(event) {
     const endTime = form.endTime.value;
     const semester = parseInt(form.semester.value, 10);
     const recurringDays = parseInt(form.recurringDays.value, 10);
-
+    const classSelect = form.studentClass.value || null;
     // ฟิลเตอร์ (ไม่บังคับ)
     const level = form.level.value || "";
     const majorId = form.department.value || "";
@@ -118,7 +118,7 @@ async function handleCreateActivity(event) {
                 start_time: startISO,
                 end_time: endISO,
                 // major_id จะถูกใส่เฉพาะเมื่อมีการเลือกสาขาใน dropdown เท่านั้น
-                major_id: majorId ? parseInt(majorId) : null, 
+                class_id: classSelect ? parseInt(classSelect, 10) : null,
                 for_student: true,
                 for_leader: true,
                 for_teacher: false,
@@ -189,6 +189,62 @@ async function fetchAllMajors() {
     console.log(`Loaded majors: ${majors.length} items`);
     return majors;
 }
+async function fetchClasses(level, majorId, year) {
+    let classQuery = supabaseClient.from("class").select("id, class_name, major_id, year");
+
+    // กรองตาม major_id
+    if (majorId) {
+        classQuery = classQuery.eq("major_id", parseInt(majorId, 10));
+    } else if (level) {
+        // ถ้าไม่มี majorId แต่เลือก level → ดึง major_ids ตาม level
+        const { data: majors, error: majorError } = await supabaseClient
+            .from("major")
+            .select("id")
+            .eq("level", level);
+        if (majorError) throw majorError;
+
+        const majorIds = majors.map(m => m.id);
+        if (majorIds.length > 0) {
+            classQuery = classQuery.in("major_id", majorIds);
+        }
+    }
+
+    // กรองตาม year
+    if (year) {
+        classQuery = classQuery.eq("year", parseInt(year, 10));
+    }
+
+    const { data: classes, error } = await classQuery;
+    if (error) throw error;
+    return classes || [];
+}
+
+// -------------------------------------------------------------
+// *อัปเดต dropdown ของ Class*
+// -------------------------------------------------------------
+async function updateClassDropdown() {
+    const level = document.getElementById('level').value;
+    const majorId = document.getElementById('department').value;
+    const year = document.getElementById('studentYear').value;
+
+    const classSelect = document.getElementById('studentClass');
+    classSelect.innerHTML = '<option value="">เลือกห้องเรียน</option>';
+
+    if (!level && !majorId && !year) return;
+
+    try {
+        const classes = await fetchClasses(level, majorId, year);
+        classes.forEach(c => {
+            const option = document.createElement('option');
+            option.value = c.id;
+            option.textContent = c.class_name || `Class ${c.id}`;
+            classSelect.appendChild(option);
+        });
+    } catch (err) {
+        console.error("Error fetching classes:", err);
+        alert("ไม่สามารถโหลดห้องเรียนได้");
+    }
+}
 
 // -------------------------------------------------------------
 // *อัปเดต dropdown สาขาและปีตามระดับที่เลือก*
@@ -231,10 +287,13 @@ function handleLevelChange(selectedLevel, majors) {
         // ใช้ year 3 สำหรับ ปวส. ถ้า class.year ใน DB ถูกตั้งค่าเป็น 3 ทั้งหมด
         // แต่ในโค้ดเดิมใช้ year 1, 2 ใน CTE และมีการ Join กับ class.year
         // ดังนั้นเพื่อให้ UI ตรงกับข้อมูลที่ควรจะเป็นสำหรับ ปวส. (ปี 1 และ ปี 2) ให้ใช้ค่า 1, 2
-        option.value = y; 
+        option.value = y;
         option.textContent = y;
         yearSelect.appendChild(option);
     });
+    departmentSelect.addEventListener('change', updateClassDropdown);
+    yearSelect.addEventListener('change', updateClassDropdown);
+    updateClassDropdown();
 }
 
 // -------------------------------------------------------------

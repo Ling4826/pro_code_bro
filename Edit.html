@@ -792,7 +792,8 @@ async function loadActivity() {
     try {
         const { data: activity, error } = await supabaseCilent
             .from('activity')
-            .select(`id, name, start_time, end_time, is_recurring, major:major_id ( id, name, level )`)
+            .select(`id, name, start_time, end_time, is_recurring, class_id,class:class_id (class_number,major:major_id (id,name,level)
+            )`)
             .eq('id', activityId)
             .single();
 
@@ -946,7 +947,7 @@ if (form) {
         const recurringDays = parseInt(document.getElementById('recurringDays').value || '0', 10);
         const semester = parseInt(document.getElementById('semester').value || '0', 10);
         const academicYear = parseInt(document.getElementById('studentYear').value || '0', 10);
-
+        const classId = document.getElementById('studentClass').value || null;
         if (!semester || !academicYear) {
             alert('กรุณาเลือกเทอมและปีการศึกษา');
             return;
@@ -962,7 +963,7 @@ if (form) {
             for_teacher: false,
             is_recurring: (recurringDays > 0) ? recurringDays : null,
             created_by: 1,
-            major_id: majorId ? parseInt(majorId,10) : null
+            class_id: classId ? parseInt(classId, 10) : null
         };
 
         try {

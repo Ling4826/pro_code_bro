@@ -47,7 +47,15 @@ async function fetchActivities() {
             start_time,
             end_time,
             is_recurring,
-            major:major_id (name, level)
+            class_id,
+            class:class_id (
+                class_number,
+                major:major_id (
+                    id,
+                    name,
+                    level
+                )
+            )
         `)
         .order('start_time', { ascending: true });
 

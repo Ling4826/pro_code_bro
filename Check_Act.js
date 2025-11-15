@@ -108,23 +108,71 @@ async function RenderTable(activities) {
         const startTime = formatTime(act.start_time);
         const endTime = formatTime(act.end_time);
 
-        // จำนวนคนทั้งหมด
-        let { data: allStudents } = await supabaseClient
-            .from('student')
-            .select('id')
-            .match(act.major ? { major_id: act.major.id } : {}); // ถ้า major มีค่า filter, ถ้า null = ทั้งโรงเรียน
-        allStudents = allStudents || [];
-        const totalStudents = allStudents.length;
+        let totalStudents = 0;
+        let displayText = "";
 
-        // เช็กจำนวนคนที่เข้าร่วม
-        const attendedCount = act.check ? act.check.filter(c => c.status === "Attended").length : 0;
+        console.log("=== Activity ===");
+        console.log("Activity:", act.name, "Major:", act.major?.name, "Level:", act.major?.level, "Semester:", act.semester, "Academic Year:", act.academic_year);
 
-        // คำนวณ %
-        const percent = totalStudents > 0 ? Math.round((attendedCount / totalStudents) * 100) : 0;
+        if (!act.major || !act.major.level) {
+            // major หรือ level เป็น null → ใช้ % ของคนทั้งหมด
+            const { data: allStudents } = await supabaseClient
+                .from('student')
+                .select('id');
+            totalStudents = (allStudents || []).length;
 
-        const statusChecks = !act.check || act.check.length === 0? "ยังไม่เช็ก": (attendedCount === totalStudents ? "เช็กครบ" : "ยังไม่ครบ");
-    
-    
+            const attendedCount = act.check ? act.check.filter(c => c.status === "Attended").length : 0;
+            const percent = totalStudents > 0 ? Math.round((attendedCount / totalStudents) * 100) : 0;
+
+            displayText = `${percent}% เข้าร่วม`;
+
+            console.log("All students:", totalStudents, "Attended:", attendedCount, "Percent:", percent);
+        } else {
+            // major และ level มีค่า → ใช้จำนวนคนจาก class ของ major + year
+            const levelToYear = act.major.level === 'ปวช.' ? 1 : 4; // mapping level -> year
+            const { data: classes } = await supabaseClient
+                .from('class')
+                .select('id')
+                .eq('major_id', act.major.id)
+                .eq('year', levelToYear);
+
+            console.log("Classes found:", classes);
+
+            let studentsInClass = [];
+            if (classes && classes.length > 0) {
+                const classIds = classes.map(c => c.id);
+
+                const { data: students } = await supabaseClient
+                    .from('student')
+                    .select('id')
+                    .in('class_id', classIds);
+
+                studentsInClass = students || [];
+            }
+
+            console.log("Students in class:", studentsInClass);
+
+            totalStudents = studentsInClass.length;
+
+            const attendedCount = act.check
+                ? act.check.filter(c =>
+                    studentsInClass.some(s => s.id === c.student_id) &&
+                    c.semester === act.semester &&
+                    c.academic_year === act.academic_year &&
+                    c.status === "Attended"
+                ).length
+                : 0;
+
+            console.log("Attended count:", attendedCount, "Total students:", totalStudents);
+
+            displayText = `${attendedCount} / ${totalStudents} คน`;
+        }
+
+        // สถานะเช็กชื่อ
+        const attendedCountOverall = act.check ? act.check.filter(c => c.status === "Attended").length : 0;
+        const statusChecks = !act.check || act.check.length === 0
+            ? "ยังไม่เช็ก"
+            : (attendedCountOverall === totalStudents ? "เช็กครบ" : "ยังไม่ครบ");
 
         const row = `
         <tr>
@@ -134,13 +182,16 @@ async function RenderTable(activities) {
             <td class="status-cell ${statusChecks === "เช็กครบ" ? "checked" : "unchecked"}">
                 ${statusChecks}
             </td>
-            <td>${percent}% เข้าร่วม</td>
+            <td>${displayText}</td>
         </tr>
         `;
 
         container.innerHTML += row;
     }
 }
+
+
+
 
 
 
