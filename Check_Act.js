@@ -15,6 +15,7 @@ async function fetchActivities() {
             is_recurring,
             class:class_id (
                 id,
+                class_name,
                 year,
                 class_number,
                 major:major_id (
@@ -130,6 +131,7 @@ async function RenderTable(activities) {
         const major = act.class?.major?.name ?? null;
         const level = act.class?.major?.level ?? null;
         const year = act.class?.year ?? null;
+        const className = act.class?.class_name ?? null;
 
         let totalStudents = 0;
         let attendedCount = 0;
@@ -173,7 +175,6 @@ async function RenderTable(activities) {
                 .from('student')
                 .select('id')
                 .in('class_id', classIds);
-
             const studentsInClass = students || [];
 
             totalStudents = studentsInClass.length;
@@ -203,6 +204,9 @@ async function RenderTable(activities) {
             <td>${act.name}</td>
             <td>${startTime} - ${endTime}</td>
             <td>${major ?? 'ทั้งโรงเรียน'}</td>
+            <td>${level ?? '-'}</td>
+            <td>${year ?? '-'}</td>
+            <td>${className ?? '-'}</td>
             <td class="status-cell ${statusChecks === "เช็กครบ" ? "checked" : "unchecked"}">
                 ${statusChecks}
             </td>
