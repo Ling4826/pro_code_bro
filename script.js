@@ -241,6 +241,7 @@ function RenderActivityCards(activities, container) {
             </div>
         `;
         container.innerHTML += cardHTML;
+        
     });
 
     attachCardEventListeners();
@@ -330,8 +331,26 @@ function filterActivities(activities) {
 // ==========================================================
 
 function attachCardEventListeners() {
+
+    // 💡 1. (เพิ่มใหม่) Listener สำหรับการ์ดทั้งใบ (ไปหน้าเช็คชื่อ)
+    document.querySelectorAll('.activity-card').forEach(card => {
+        card.addEventListener('click', (event) => {
+            
+            // ถ้าที่คลิกคือไอคอน (fas) ให้ข้ามไป (ปล่อยให้ Listener ของไอคอนทำงาน)
+            if (event.target.classList.contains('fas')) {
+                return;
+            }
+
+            // ถ้าคลิกที่การ์ด (ไม่ใช่ไอคอน) ให้ไปหน้า Check_student
+            const activityId = card.dataset.id;
+            window.location.href = `Check_student.html?activityId=${activityId}`;
+        });
+    });
+
+    // 💡 2. (แก้ไข) Listener ปุ่มลบ
     document.querySelectorAll('.delete-btn').forEach(button => {
         button.addEventListener('click', (event) => {
+            event.stopPropagation(); // ⬅️ หยุด event ไม่ให้ทะลุไปที่การ์ด
             const card = event.target.closest('.activity-card');
             activityIdToDelete = card.dataset.id;
             const activityName = card.dataset.name;
@@ -339,8 +358,10 @@ function attachCardEventListeners() {
         });
     });
     
+    // 💡 3. (แก้ไข) Listener ปุ่มแก้ไข
     document.querySelectorAll('.edit-btn').forEach(button => {
         button.addEventListener('click', (event) => {
+            event.stopPropagation(); // ⬅️ หยุด event ไม่ให้ทะลุไปที่การ์ด
             const card = event.target.closest('.activity-card');
             const activityId = card.dataset.id;
             window.location.href = `Edit.html?activityId=${activityId}`;
@@ -352,11 +373,11 @@ function attachCardEventListeners() {
 // === 5. MODAL FUNCTIONS ===
 // ==========================================================
 
-const confirmDialog = document.getElementById('confirmDialog');
-const activityNameSpan = document.getElementById('activityToDeleteName');
-const cancelDeleteBtn = document.getElementById('cancelDelete');
-const confirmDeleteBtn = document.getElementById('confirmDelete');
-const closeModalBtn = confirmDialog ? document.querySelector('.modal-header .close-btn') : null;
+let confirmDialog;
+let activityNameSpan;
+let cancelDeleteBtn;
+let confirmDeleteBtn;
+let closeModalBtn;
 
 function showConfirmModal(name) {
     activityNameSpan.textContent = name;
@@ -376,21 +397,38 @@ if (confirmDialog) {
     
     confirmDeleteBtn.addEventListener('click', async () => {
         if (activityIdToDelete) {
-            const { error } = await supabaseClient
-                .from('activity')
-                .delete()
-                .eq('id', activityIdToDelete);
+            
+            try {
+                // 1. ลบ 'ตัวลูก' (ข้อมูลเช็คชื่อ) ทั้งหมดที่เกี่ยวข้องก่อน
+                const { error: checkError } = await supabaseClient
+                    .from('activity_check')
+                    .delete()
+                    .eq('activity_id', activityIdToDelete);
+                
+                if (checkError) throw checkError; // ถ้าลบตัวลูกไม่ผ่าน ให้หยุดทันที
 
-            if (error) {
-                alert(`เกิดข้อผิดพลาดในการลบ: ${error.message}`);
-            } else {
+                // 2. ลบ 'ตัวแม่' (กิจกรรม)
+                const { error: activityError } = await supabaseClient
+                    .from('activity')
+                    .delete()
+                    .eq('id', activityIdToDelete);
+
+                if (activityError) throw activityError; // ถ้าลบตัวแม่ไม่ผ่าน ให้หยุด
+
+                // 3. ถ้าสำเร็จทั้งหมด
                 alert('ลบกิจกรรมเรียบร้อยแล้ว!');
-                fetchActivities();
+                fetchActivities(); // โหลดการ์ดใหม่
+
+            } catch (error) {
+                // 4. ถ้าเกิดข้อผิดพลาด
+                console.error('Delete error:', error);
+                alert(`เกิดข้อผิดพลาดในการลบ: ${error.message}`);
             }
         }
         hideConfirmModal();
     });
 }
+// ใน .js ของหน้าที่แสดงการ์ดกิจกรรม
 
 // ==========================================================
 // === 6. INITIALIZATION ===
@@ -402,6 +440,61 @@ document.addEventListener('DOMContentLoaded', () => {
     studentYearSelect = document.getElementById('studentYear');
     classNumberSelect = document.getElementById('classNumber');
     activityNameInput = document.getElementById('activityNameInput');
+
+    // 💡💡💡 [ FIX START ] 💡💡💡
+    
+    // 4. กำหนดค่าตัวแปร Modal (หลังจาก DOM โหลดแล้ว)
+    confirmDialog = document.getElementById('confirmDialog');
+    activityNameSpan = document.getElementById('activityToDeleteName');
+    cancelDeleteBtn = document.getElementById('cancelDelete');
+    confirmDeleteBtn = document.getElementById('confirmDelete');
+
+    // 5. ย้ายโค้ดที่ 'ตัด' มาจากข้อ 2 มาวางที่นี่
+    if (confirmDialog) {
+        // (ต้อง query แบบนี้เพราะ confirmDialog ถูกกำหนดค่าแล้ว)
+        closeModalBtn = confirmDialog.querySelector('.modal-header .close-btn'); 
+
+        cancelDeleteBtn.addEventListener('click', hideConfirmModal);
+        if (closeModalBtn) {
+            closeModalBtn.addEventListener('click', hideConfirmModal);
+        }
+        
+        // (โค้ดลบ 2 ชั้น ที่เราทำไว้ก่อนหน้า)
+        confirmDeleteBtn.addEventListener('click', async () => {
+            if (activityIdToDelete) {
+                
+                try {
+                    // 1. ลบ 'ตัวลูก' (ข้อมูลเช็คชื่อ)
+                    const { error: checkError } = await supabaseClient
+                        .from('activity_check')
+                        .delete()
+                        .eq('activity_id', activityIdToDelete);
+                    
+                    if (checkError) throw checkError; 
+
+                    // 2. ลบ 'ตัวแม่' (กิจกรรม)
+                    const { error: activityError } = await supabaseClient
+                        .from('activity')
+                        .delete()
+                        .eq('id', activityIdToDelete);
+
+                    if (activityError) throw activityError; 
+
+                    // 3. ถ้าสำเร็จ
+                    alert('ลบกิจกรรมเรียบร้อยแล้ว!');
+                    fetchActivities(); 
+
+                } catch (error) {
+                    // 4. ถ้าพลาด
+                    console.error('Delete error:', error);
+                    alert(`เกิดข้อผิดพลาดในการลบ: ${error.message}`);
+                }
+            }
+            hideConfirmModal();
+        });
+    }
+    // 💡💡💡 [ FIX END ] 💡💡💡
+
 
     if (!departmentSelect || !levelSelect || !studentYearSelect || !classNumberSelect || !activityNameInput) {
         console.error("Critical Error: One or more required DOM elements were not found.");

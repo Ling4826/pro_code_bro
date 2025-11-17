@@ -112,6 +112,11 @@ body {
     transition: transform 0.2s, box-shadow 0.2s;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
+.sidebar a.active {
+    color: white;
+    background-color: #444;
+    border-left-color: #d9534f; /* แถบสีส้มด้านซ้าย */
+}
 
 .function-block:hover {
     transform: translateY(-5px);
