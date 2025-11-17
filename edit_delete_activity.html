@@ -7,15 +7,31 @@
         <link rel="stylesheet"
             href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
         <link rel="stylesheet" href="style.css">
-        <script
-            src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@1/dist/umd/supabase.js"></script>
+       <script 
+    src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
             
         <script src="script.js"></script>
         <style>
         /* 5. Card Styles (ใช้โค้ดเดิม) */
+        /* 5. Card Styles (ใช้โค้ดเดิม) */
         .activity-card-container { display: flex; flex-wrap: wrap; gap: 20px; }
-        .activity-card { width: 250px; background-color: #337ab7; color: white; border-radius: 8px; padding: 15px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); position: relative; }
+        .activity-card { 
+            width: 250px; 
+            background-color: #337ab7; 
+            color: white; 
+            border-radius: 8px; 
+            padding: 15px; 
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); 
+            position: relative; 
+            cursor: pointer; /* ⬅️ 1. เพิ่มบรรทัดนี้ */
+            transition: transform 0.2s; /* ⬅️ 2. (Optional) เพิ่มบรรทัดนี้ */
+        }
+        /* 3. (Optional) เพิ่ม 3 บรรทัดนี้ */
+        .activity-card:hover {
+            transform: translateY(-3px);
+        }
         .card-actions { position: absolute; bottom: 15px; right: 15px; display: flex; gap: 10px; }
+        /* ... (CSS ที่เหลือ) ... */
         .card-actions i { font-size: 20px; cursor: pointer; color: #f0ad4e; }
         .card-actions .fa-trash-alt { color: #d9534f; }
 

@@ -9,19 +9,15 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/th.js"></script>
+    <script
+            src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="Edit.js"></script>
     <link rel="stylesheet" href="Edit_style.css">
     <script>
-    // 💡 เพิ่ม Flatpickr สำหรับ Time Picker ที่นี่ (สำหรับ .flatpickr-time)
-    flatpickr(".flatpickr-time", {
-        enableTime: true,
-        noCalendar: true,
-        time_24hr: true,
-        dateFormat: "H:i", // รูปแบบข้อมูลที่ส่งกลับ
-        altInput: true,
-        altFormat: "H:i น.", // รูปแบบที่แสดงผล (มี "น.")
-        minuteIncrement: 1,
-        locale: "th" // ใช้ภาษาไทย
+    // เรียกใช้ flatpickr สำหรับ date picker
+    flatpickr("#activityDate", {
+        dateFormat: "d/m/Y",
+        locale: "th"
     });
 </script>
 
@@ -58,7 +54,13 @@
         </div>
 
         <div class="content">
-            <h2 class="page-title">แก้ไขกิจกรรม</h2>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+    <h2 class="page-title" style="margin-bottom: 0;">แก้ไขกิจกรรม</h2>
+    
+    <button type="button" id="exportExcelBtn" class="create-button" style="background-color: #2ecc71; margin-top: 0; width: auto; padding: 10px 20px;">
+        บันทึกเป็น Excel <i class="fas fa-file-excel"></i>
+    </button>
+</div>
 
             <form id="createActivityForm">
                 <div class="form-row">

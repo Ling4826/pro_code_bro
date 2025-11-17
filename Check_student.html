@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="th">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>ตรวจสอบกิจกรรม - PBNTC Activity System</title>
+        <link rel="stylesheet"
+            href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+        <link rel="stylesheet"
+            href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+        <script
+            src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+        <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+        <script
+            src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/th.js"></script>
+        <script
+            src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+        <script src="Check_student.js"></script>
+        <link rel="stylesheet" href="Edit_style.css">
+        <script>
+    // เรียกใช้ flatpickr สำหรับ date picker
+    flatpickr("#activityDate", {
+        dateFormat: "d/m/Y",
+        locale: "th"
+    });
+    
+    
+</script>
+
+    </head>
+    <body>
+        <div class="header">
+            <div class="logo-area">
+                <img src="pbntc-logo.png" alt="PBNTC Logo" class="logo">
+                PBNTC
+            </div>
+        </div>
+
+        <div class="main-container">
+            <div class="sidebar">
+                <nav>
+                    <a href="index.html"><i class="fas fa-home"></i>
+                        หน้าหลัก</a>
+                    <a href="create_activity.html"><i class="fas fa-edit"></i>
+                        สร้างกิจกรรม</a>
+                    <a href="edit_delete_activity.html" class="active"><i
+                            class="fas fa-list-alt"></i> แก้ไข / ลบกิจกรรม</a>
+                    <a href="check_activity.html"><i
+                            class="fas fa-clipboard-check"></i>
+                        ตรวจสอบกิจกรรม</a>
+                    <a href="Department_information.html"><i
+                            class="fas fa-building"></i> ข้อมูลสาขา</a>
+                    <a href="Term_results_summary.html"><i
+                            class="fas fa-poll"></i> สรุปผลเทอม</a>
+                    <a href="#" class="logout"><i
+                            class="fas fa-sign-out-alt"></i>
+                        ลงชื่อเข้าใช้ออก</a>
+                </nav>
+            </div>
+
+            <div class="content">
+                <div
+                    style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h2 class="page-title"
+                        style="margin-bottom: 0;">ตรวจสอบและบันทึกการเข้าเรียน</h2>
+
+                    <button type="button" id="exportExcelBtn"
+                        class="create-button"
+                        style="background-color: #2ecc71; margin-top: 0; width: auto; padding: 10px 20px;">
+                        บันทึกเป็น Excel <i class="fas fa-file-excel"></i>
+                    </button>
+                </div>
+
+                <form id="createActivityForm">
+                    <div class="form-row">
+                        <div class="form-group" style="width: 100%;">
+                            <label for="activityName"
+                                class="required">ชื่อกิจกรรม</label>
+                            <input type="text" id="activityName"
+                                name="activityName" required disabled>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="activityDate"
+                                class="required">วันที่จัดกิจกรรม</label>
+                            <div class="input-icon-group">
+                                <input type="text" id="activityDate"
+                                    name="activityDate" placeholder="วว/ดด/ปปปป"
+                                    required disabled>
+                                <i class="fas fa-calendar-alt"></i>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="startTime"
+                                class="required">เวลาเริ่ม</label>
+                            <div class="input-icon-group">
+                                <input type="text" id="startTime"
+                                    name="startTime" required
+                                    class="flatpickr-time"
+                                    placeholder="เลือกเวลาเริ่ม" disabled>
+                                <i class="fas fa-clock"></i>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="endTime"
+                                class="required">เวลาสิ้นสุด</label>
+                            <div class="input-icon-group">
+                                <input type="text" id="endTime" name="endTime"
+                                    required class="flatpickr-time"
+                                    placeholder="เลือกเวลาสิ้นสุด" disabled>
+                                <i class="fas fa-clock"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="level">ระดับ</label>
+                            <div class="input-icon-group">
+                                <select id="level" name="level" disabled>
+                                    <option value>เลือกระดับ</option>
+                                    <option value="ปวช.">ปวช.</option>
+                                    <option value="ปวส.">ปวส.</option>
+                                </select>
+                                <i class="fas fa-check"></i>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="department">สาขา</label>
+                            <div class="input-icon-group">
+                                <select id="department" name="department"
+                                    disabled>
+                                    <option value>เลือกสาขา</option>
+                                    <option value="1">ไฟฟ้า</option>
+                                    <option value="2">ช่างยนต์</option>
+                                </select>
+                                <i class="fas fa-check"></i>
+                            </div>
+                        </div>
+
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="semester" class="required">เทอม</label>
+                            <select id="semester" name="semester" required
+                                disabled>
+                                <option value>เลือกเทอม</option>
+                                <option value="1">เทอม 1</option>
+                                <option value="2">เทอม 2</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="studentYear" class="required">ปี</label>
+                            <select id="studentYear" name="studentYear" required
+                                disabled>
+                                <option value>เลือกปี</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="studentClass">ห้อง</label>
+                            <select id="studentClass" name="studentClass"
+                                disabled>
+                                <option value>เลือกห้อง</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group"
+                            style="flex: unset; width: 300px; flex-direction: row; align-items: center;">
+                            <label for="recurringDays"
+                                style="width: 100px; font-weight: normal; margin-right: 10px;">จัดขึ้นทุกๆ</label>
+                            <input type="number" id="recurringDays"
+                                name="recurringDays" value="0"
+                                style="width: 80px;" disabled>
+                            <span
+                                style="font-weight: bold; margin-left: 10px;">วัน</span>
+                        </div>
+                    </div>
+                    <div>
+                        <table class="attendance-table">
+                            <thead>
+                                <tr>
+                                    <th>ชื่อ</th>
+                                    <th>รหัสนักศึกษา</th>
+                                    <th>มา</th>
+                                    <th>ขาด</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                </tr>
+                                <tr>
+
+                                </tr>
+                                <tr>
+
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <button type="submit"
+                        class="create-button">บันทึกการเข้าเรียน</button>
+
+                </form>
+            </div>
+        </div>
+        <script>
+        // เรียกใช้ flatpickr สำหรับ date picker
+        flatpickr("#activityDate", {
+            dateFormat: "d/m/Y",
+            locale: "th"
+        });
+    </script>
+    </body>
+</html>
