@@ -47,8 +47,10 @@ async function fetchActivities() {
         .addEventListener("click", () => exportToExcel(activities));
 
     LoadDate(activities);
-    setupFilters(activities);
-    RenderTable(activities);
+    await Promise.all([
+        Promise.resolve().then(() => setupFilters(activities)),
+        Promise.resolve().then(() => RenderTable(activities))
+    ]);
 }
 function formatTime(ts) {
     return new Date(ts).toLocaleTimeString('th-TH', {
@@ -85,7 +87,7 @@ function LoadDate(activities) {
 }
 
 function filtersDate( activities,selectedDay, selectedMonth, selectedYear) {
-    return activities.filter(act => {
+    return(activities.filter(act => {
         const d = new Date(act.start_time);
 
         const day = d.getDate();
@@ -97,7 +99,7 @@ function filtersDate( activities,selectedDay, selectedMonth, selectedYear) {
         const matchMonth = selectedMonth ? month === parseInt(selectedMonth) : true;
         const matchYear = selectedYear ? year === parseInt(selectedYear) : true;
         return matchDay && matchMonth && matchYear;
-    });
+    }));
 }
 function setupFilters(activities) {
     const daySelect = document.getElementById('daySelect');
@@ -124,7 +126,8 @@ async function RenderTable(activities) {
     const container = document.getElementById('activityCheckTableBody');
     container.innerHTML = "";
 
-    for (const act of activities) {
+    // สร้าง promise สำหรับทุก activity
+    const rows = await Promise.all(activities.map(async (act) => {
         const startTime = formatTime(act.start_time);
         const endTime = formatTime(act.end_time);
 
@@ -137,32 +140,18 @@ async function RenderTable(activities) {
         let attendedCount = 0;
         let displayText = "";
 
-        console.log("=== Activity ===");
-        console.log("Activity:", act.name, "Major:", major, "Level:", level, "Year:", year);
-
         if (!major || !level || !year) {
-            // === MODE: ทั้งโรงเรียน ===
+            // ทั้งโรงเรียน
             const { data: allStudents } = await supabaseClient
                 .from('student')
                 .select('id');
-
             totalStudents = (allStudents || []).length;
-
-            // count attended
             attendedCount = act.check
                 ? act.check.filter(c => c.status === "Attended").length
                 : 0;
-
-            const percent = totalStudents > 0
-                ? Math.round((attendedCount / totalStudents) * 100)
-                : 0;
-
-            displayText = `${percent}% เข้าร่วม`;
-
-            console.log("Mode: ทั้งโรงเรียน");
-            console.log("Total:", totalStudents, "Attended:", attendedCount);
+            displayText = `${attendedCount}/${totalStudents} คน (${totalStudents > 0 ? Math.round((attendedCount / totalStudents)*100) : 0}%)`;
         } else {
-            // === MODE: ตาม major + year ===
+            // ตาม major + year
             const { data: classList } = await supabaseClient
                 .from('class')
                 .select('id')
@@ -170,28 +159,20 @@ async function RenderTable(activities) {
                 .eq('year', year);
 
             const classIds = classList?.map(c => c.id) || [];
-
             const { data: students } = await supabaseClient
                 .from('student')
                 .select('id')
                 .in('class_id', classIds);
-            const studentsInClass = students || [];
 
-            totalStudents = studentsInClass.length;
-
+            totalStudents = students?.length || 0;
             attendedCount = act.check
                 ? act.check.filter(c =>
-                    studentsInClass.some(s => s.id === c.student_id)
+                    students?.some(s => s.id === c.student_id)
                 ).length
                 : 0;
-
             displayText = `${attendedCount} / ${totalStudents} คน`;
-
-            console.log("Mode: ตามแผนก");
-            console.log("Students:", totalStudents, "Attended:", attendedCount);
         }
 
-        // === สถานะเช็กชื่อ ===
         const statusChecks =
             !act.check || act.check.length === 0
                 ? "ยังไม่เช็ก"
@@ -199,7 +180,7 @@ async function RenderTable(activities) {
                     ? "เช็กครบ"
                     : "ยังไม่ครบ";
 
-        const row = `
+        return `
         <tr>
             <td>${act.name}</td>
             <td>${startTime} - ${endTime}</td>
@@ -213,10 +194,12 @@ async function RenderTable(activities) {
             <td>${displayText}</td>
         </tr>
         `;
+    }));
 
-        container.innerHTML += row;
-    }
+    // append rows ทีเดียว
+    container.innerHTML = rows.join('');
 }
+
 
 
 
