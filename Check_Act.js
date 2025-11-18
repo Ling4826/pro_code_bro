@@ -6,6 +6,10 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 const CACHE_KEY = "activitiesCache";
 const CACHE_TTL = 5 * 60 * 1000; // 5 นาที
+const CACHE_KEY_STUDENTS = "studentsCache";
+const CACHE_KEY_CLASSES = "classesCache";
+let allStudents = new Set();
+let allClassesByMajorYear = {}; // { "majorId_year": Set(classId) }
 
 async function fetchActivities() {
     // เช็ก cache ก่อน
@@ -30,7 +34,7 @@ async function fetchActivities() {
             console.log("หมดอายุ cache, ดึงข้อมูลใหม่");
         }
     }
-
+    const start = performance.now();
     // ถ้าไม่มี cache หรือหมดอายุ ให้ fetch จริง
     const { data: activities, error } = await supabaseClient
         .from('activity')
@@ -61,7 +65,8 @@ async function fetchActivities() {
             )
         `)
         .order('start_time', { ascending: true });
-            
+        const end = performance.now();
+        console.log(`fetchData ใช้เวลา ${(end - start).toFixed(3)} ms`);
     if (error) {
         console.error('Error fetching activities:', error.message);
         container.innerHTML = '<p>ไม่สามารถดึงรายการกิจกรรมได้</p>';
@@ -92,7 +97,47 @@ function formatTime(ts) {
         minute: '2-digit'
     });
 }
+async function loadCache() {
+    // โหลด student จาก cache หรือ Supabase
+    const cachedStudents = localStorage.getItem(CACHE_KEY_STUDENTS);
+    if (cachedStudents) {
+        const parsed = JSON.parse(cachedStudents);
+        allStudents = new Set(parsed.map(s => JSON.stringify(s))); // store {id,class_id} as string
+        console.log("Loaded students from cache");
+    } else {
+        const { data: students } = await supabaseClient
+            .from('student')
+            .select('id, class_id');
+        allStudents = new Set(students.map(s => JSON.stringify(s)));
+        localStorage.setItem(CACHE_KEY_STUDENTS, JSON.stringify(students));
+        console.log("Fetched students from Supabase");
+    }
 
+    // โหลด class จาก cache หรือ Supabase
+    const cachedClasses = localStorage.getItem(CACHE_KEY_CLASSES);
+    if (cachedClasses) {
+        const parsed = JSON.parse(cachedClasses);
+        allClassesByMajorYear = {};
+        parsed.forEach(c => {
+            const key = `${c.major_id}_${c.year}`;
+            if (!allClassesByMajorYear[key]) allClassesByMajorYear[key] = new Set();
+            allClassesByMajorYear[key].add(c.id);
+        });
+        console.log("Loaded classes from cache");
+    } else {
+        const { data: classes } = await supabaseClient
+            .from('class')
+            .select('id, major_id, year');
+        allClassesByMajorYear = {};
+        classes.forEach(c => {
+            const key = `${c.major_id}_${c.year}`;
+            if (!allClassesByMajorYear[key]) allClassesByMajorYear[key] = new Set();
+            allClassesByMajorYear[key].add(c.id);
+        });
+        localStorage.setItem(CACHE_KEY_CLASSES, JSON.stringify(classes));
+        console.log("Fetched classes from Supabase");
+    }
+}
 function LoadDate(activities) {
     const daySelect = document.getElementById('daySelect');
     const monthSelect = document.getElementById('monthSelect');
@@ -120,48 +165,55 @@ function LoadDate(activities) {
     years.forEach(y => yearSelect.innerHTML += `<option value="${y}">${y}</option>`);
 }
 
-function filtersDate( activities,selectedDay, selectedMonth, selectedYear) {
-    return(activities.filter(act => {
-        const d = new Date(act.start_time);
-
-        const day = d.getDate();
-        const month = d.getMonth() + 1;
-        const year = d.getFullYear() + 543; // แปลงเป็น พ.ศ.
-
-        // ถ้า select เป็นค่า null/empty ให้ไม่กรองตามค่านั้น
-        const matchDay = selectedDay ? day === parseInt(selectedDay) : true;
-        const matchMonth = selectedMonth ? month === parseInt(selectedMonth) : true;
-        const matchYear = selectedYear ? year === parseInt(selectedYear) : true;
-        return matchDay && matchMonth && matchYear;
-    }));
-}
 function setupFilters(activities) {
     const daySelect = document.getElementById('daySelect');
     const monthSelect = document.getElementById('monthSelect');
     const yearSelect = document.getElementById('yearSelect');
 
-    const applyFilter = () => {
-        const filtered = filtersDate(
-            activities,
-            daySelect.value,
-            monthSelect.value,
-            yearSelect.value
-        );
-        RenderTable(filtered);
-    };
+    // ค่าเริ่มต้นเป็นค่าว่างทั้งหมด
+    daySelect.value = "";
+    monthSelect.value = "";
+    yearSelect.value = "";
 
+    function applyFilter() {
+        const dVal = daySelect.value;
+        const mVal = monthSelect.value;
+        const yVal = yearSelect.value;
+
+        const filtered = activities.filter(act => {
+            const d = new Date(act.start_time);
+
+            const day = d.getDate();
+            const month = d.getMonth() + 1;
+            const year = d.getFullYear() + 543;
+
+            const matchDay = dVal ? day === parseInt(dVal) : true;
+            const matchMonth = mVal ? month === parseInt(mVal) : true;
+            const matchYear = yVal ? year === parseInt(yVal) : true;
+
+            return matchDay && matchMonth && matchYear;
+        });
+
+        RenderTable(filtered);
+    }
+
+    // applyFilter จะรันเฉพาะเมื่อมีการเปลี่ยนค่า select
     daySelect.addEventListener('change', applyFilter);
     monthSelect.addEventListener('change', applyFilter);
     yearSelect.addEventListener('change', applyFilter);
+
+    // เรียก RenderTable ครั้งแรกแบบไม่กรอง
+    RenderTable(activities);
 }
 
 
-async function RenderTable(activities) {
+
+function RenderTable(activities) {
+    const start = performance.now();
     const container = document.getElementById('activityCheckTableBody');
     container.innerHTML = "";
 
-    // สร้าง promise สำหรับทุก activity
-    const rows = await Promise.all(activities.map(async (act) => {
+    const rows = activities.map(act => {
         const startTime = formatTime(act.start_time);
         const endTime = formatTime(act.end_time);
 
@@ -172,40 +224,32 @@ async function RenderTable(activities) {
 
         let totalStudents = 0;
         let attendedCount = 0;
-        let displayText = "";
 
         if (!major || !level || !year) {
             // ทั้งโรงเรียน
-            const { data: allStudents } = await supabaseClient
-                .from('student')
-                .select('id');
-            totalStudents = (allStudents || []).length;
+            totalStudents = allStudents.size;
             attendedCount = act.check
                 ? act.check.filter(c => c.status === "Attended").length
                 : 0;
-            displayText = `${attendedCount}/${totalStudents} คน (${totalStudents > 0 ? Math.round((attendedCount / totalStudents)*100) : 0}%)`;
         } else {
-            // ตาม major + year
-            const { data: classList } = await supabaseClient
-                .from('class')
-                .select('id')
-                .eq('major_id', act.class.major.id)
-                .eq('year', year);
+            const key = `${act.class.major.id}_${year}`;
+            const classIds = allClassesByMajorYear[key] ?? new Set();
 
-            const classIds = classList?.map(c => c.id) || [];
-            const { data: students } = await supabaseClient
-                .from('student')
-                .select('id')
-                .in('class_id', classIds);
+            // students ใน classIds
+            const students = Array.from(allStudents)
+                .map(s => JSON.parse(s))
+                .filter(s => classIds.has(s.class_id))
+                .map(s => s.id);
 
-            totalStudents = students?.length || 0;
+            totalStudents = students.length;
             attendedCount = act.check
-                ? act.check.filter(c =>
-                    students?.some(s => s.id === c.student_id)
-                ).length
+                ? act.check.filter(c => students.includes(c.student_id)).length
                 : 0;
-            displayText = `${attendedCount} / ${totalStudents} คน`;
         }
+
+        const percent = totalStudents > 0
+            ? Math.round((attendedCount / totalStudents) * 100)
+            : 0;
 
         const statusChecks =
             !act.check || act.check.length === 0
@@ -225,14 +269,15 @@ async function RenderTable(activities) {
             <td class="status-cell ${statusChecks === "เช็กครบ" ? "checked" : "unchecked"}">
                 ${statusChecks}
             </td>
-            <td>${displayText}</td>
-        </tr>
-        `;
-    }));
+            <td>${attendedCount} / ${totalStudents} คน (${percent}%)</td>
+        </tr>`;
+    });
 
-    // append rows ทีเดียว
     container.innerHTML = rows.join('');
+    const end = performance.now();
+    console.log(`RenderTable (cached + Set) ใช้เวลา ${(end - start).toFixed(3)} ms`);
 }
+
 async function autoCheckUpdates() {
     const { data, error } = await supabaseClient
         .from('activity')
@@ -260,7 +305,8 @@ async function initCount() {
     }
 }
 document.addEventListener('DOMContentLoaded', async () => {
-    await initCount();     // ตั้งค่า lastCount ก่อน
+    await initCount();
+    await loadCache();     // ตั้งค่า lastCount ก่อน
     await fetchActivities();
     setInterval(autoCheckUpdates, 5000);  // เริ่มตรวจอัปเดตหลังตั้งค่าแล้ว
 });
