@@ -4,7 +4,34 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 
 // สร้าง Supabase Client
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const CACHE_KEY = "activitiesCache";
+const CACHE_TTL = 5 * 60 * 1000; // 5 นาที
+
 async function fetchActivities() {
+    // เช็ก cache ก่อน
+    const cached = localStorage.getItem(CACHE_KEY);
+    if (cached) {
+        const parsed = JSON.parse(cached);
+        const now = new Date().getTime();
+        if (now - parsed.timestamp < CACHE_TTL) {
+            console.log("ใช้ cache จาก localStorage");
+            const activities = parsed.data;
+
+            document.getElementById("exportExcelBtn")
+                .addEventListener("click", () => exportToExcel(activities));
+
+            LoadDate(activities);
+            await Promise.all([
+                Promise.resolve().then(() => setupFilters(activities)),
+                Promise.resolve().then(() => RenderTable(activities))
+            ]);
+            return;
+        } else {
+            console.log("หมดอายุ cache, ดึงข้อมูลใหม่");
+        }
+    }
+
+    // ถ้าไม่มี cache หรือหมดอายุ ให้ fetch จริง
     const { data: activities, error } = await supabaseClient
         .from('activity')
         .select(`
@@ -34,7 +61,7 @@ async function fetchActivities() {
             )
         `)
         .order('start_time', { ascending: true });
-
+            
     if (error) {
         console.error('Error fetching activities:', error.message);
         container.innerHTML = '<p>ไม่สามารถดึงรายการกิจกรรมได้</p>';
@@ -42,6 +69,12 @@ async function fetchActivities() {
     }
 
     console.log("Activities:", activities);
+
+    // เก็บ cache ลง localStorage
+    localStorage.setItem(CACHE_KEY, JSON.stringify({
+        timestamp: new Date().getTime(),
+        data: activities
+    }));
 
     document.getElementById("exportExcelBtn")
         .addEventListener("click", () => exportToExcel(activities));
@@ -52,6 +85,7 @@ async function fetchActivities() {
         Promise.resolve().then(() => RenderTable(activities))
     ]);
 }
+
 function formatTime(ts) {
     return new Date(ts).toLocaleTimeString('th-TH', {
         hour: '2-digit',
@@ -199,15 +233,6 @@ async function RenderTable(activities) {
     // append rows ทีเดียว
     container.innerHTML = rows.join('');
 }
-
-
-
-
-
-
-
-
-
 async function autoCheckUpdates() {
     const { data, error } = await supabaseClient
         .from('activity')
@@ -222,27 +247,7 @@ async function autoCheckUpdates() {
     }
 }
 function exportToExcel(activities) {
-    // แปลงข้อมูลให้อยู่ในรูปที่อ่านง่าย
-    const exportData = activities.map(act => ({
-        "ชื่อกิจกรรม": act.name,
-        "เวลาเริ่ม": formatTime(act.start_time),
-        "เวลาสิ้นสุด": formatTime(act.end_time),
-        "แผนก": act.major?.name ?? "ทั้งโรงเรียน",
-        "ระดับ": act.major?.level ?? "-",
-        "วันเริ่ม (ISO)": act.start_time,
-        "วันสิ้นสุด (ISO)": act.end_time,
-        "สถานะเช็กชื่อ": act.check?.length > 0 ? "เช็กแล้ว" : "ยังไม่เช็ก"
-    }));
-
-    // สร้าง worksheet
-    const worksheet = XLSX.utils.json_to_sheet(exportData);
-
-    // สร้าง workbook
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Activities");
-
-    // ดาวน์โหลดไฟล์
-    XLSX.writeFile(workbook, "activities.xlsx");
+    alert("กำลังพัฒนาฟีเจอร์นี้...");
 }
 async function initCount() {
     const { data, error } = await supabaseClient
