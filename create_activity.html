@@ -22,7 +22,7 @@
         /* CSS เฉพาะสำหรับหน้านี้ */
         .form-row {
             display: flex;
-            align-items: center;
+            align-items: flex-start; /* เปลี่ยนจาก center เป็น flex-start เพื่อให้ทุกกล่องชิดขอบบนเท่ากัน */
             margin-bottom: 25px;
             gap: 20px;
         }
@@ -32,6 +32,7 @@
             flex: 1;
             min-width: 250px;
         }
+       /* กำหนดความสูง Input ให้เท่ากันแน่นอน ทั้งช่องปกติและช่องที่มีไอคอน */
         .form-group input, .form-group select {
             padding: 10px 12px;
             border: 1px solid #ccc;
@@ -39,6 +40,7 @@
             font-size: 16px;
             box-sizing: border-box;
             width: 100%;
+            height: 45px; /* เพิ่มบรรทัดนี้: ล็อคความสูงให้เท่ากันทุกช่อง */
         }
         .required::before {
             content: '*';
@@ -55,13 +57,17 @@
             cursor: pointer;
             margin-top: 20px;
         }
-        /* สไตล์สำหรับไอคอนนาฬิกาใน input */
+        /* ปรับแต่งกลุ่มที่มีไอคอนให้ขยายเต็มพื้นที่ */
         .input-icon-group {
             position: relative;
             width: 100%;
+            display: block; /* ตรวจสอบว่าเป็น block หรือ flex เพื่อให้เต็มความกว้าง */
         }
+        /* ให้ Input ในกลุ่มไอคอนมีความสูงเท่ากับข้างบน */
         .input-icon-group input {
             padding-right: 35px;
+            width: 100%;
+            height: 45px; /* ต้องเท่ากับ .form-group input ด้านบน */
         }
         .input-icon-group i {
             position: absolute;
@@ -70,7 +76,80 @@
             transform: translateY(-50%);
             color: #777;
             pointer-events: none;
+            z-index: 2; /* ดันไอคอนมาข้างหน้าเผื่อโดนบัง */
         }
+        /* --- Animation สำหรับปุ่มทั่วไปในหน้า Edit.html --- */
+
+/* 1. ปุ่ม "บันทึก" และ "ย้อนกลับ" ที่อยู่ข้างล่าง */
+.create-button {
+    /* Base styles (ปรับจากเดิม) */
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: bold;
+    color: white;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    
+    /* เพิ่ม Transition สำหรับแอนิเมชัน */
+    transition: all 0.2s ease-out; /* ทำให้การเปลี่ยนสถานะดูนุ่มนวล */
+}
+
+/* เมื่อเมาส์ชี้ที่ปุ่ม "บันทึก" หรือ "ย้อนกลับ" */
+.create-button:hover {
+    transform: translateY(-3px); /* ทำให้ปุ่มลอยขึ้นเล็กน้อย */
+    box-shadow: 0 8px 12px rgba(0, 0, 0, 0.2); /* เพิ่มเงาให้ดูมีมิติมากขึ้น */
+    filter: brightness(1.1); /* ทำให้สีสว่างขึ้นเล็กน้อย */
+}
+
+/* เมื่อกดปุ่ม "บันทึก" หรือ "ย้อนกลับ" (Active State) */
+.create-button:active {
+    transform: translateY(1px); /* ทำให้ปุ่มจมลงไปเล็กน้อย */
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* ลดเงาให้ดูเหมือนถูกกด */
+    filter: brightness(0.9); /* ทำให้สีเข้มขึ้นเล็กน้อย */
+}
+
+
+/* 2. ปุ่ม "บันทึกเป็น Excel" ด้านบนขวา */
+#exportExcelBtn {
+    /* ใช้ Base styles ของ .create-button */
+    /* ถ้ามี CSS ซ้อนกัน ให้เพิ่ม !important */
+    /* background-color: #2ecc71;  ไม่ต้องซ้ำ */
+    margin: 0 !important; /* ทับ margin เดิม */
+    width: auto !important; /* ทับ width เดิม */
+    padding: 10px 20px !important; /* ทับ padding เดิม */
+    height: 40px !important; /* ทับ height เดิม */
+    display: flex !important; /* ทับ display เดิม */
+    align-items: center !important; /* ทับ align-items เดิม */
+    gap: 10px !important; /* ทับ gap เดิม */
+}
+
+/* เมื่อเมาส์ชี้ที่ปุ่ม "บันทึกเป็น Excel" */
+#exportExcelBtn:hover {
+    transform: translateY(-3px); /* ลอยขึ้น */
+    box-shadow: 0 8px 12px rgba(0, 0, 0, 0.2); /* เงาเข้มขึ้น */
+    filter: brightness(1.1); /* สว่างขึ้น */
+}
+
+/* เมื่อกดปุ่ม "บันทึกเป็น Excel" */
+#exportExcelBtn:active {
+    transform: translateY(1px); /* จมลง */
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* เงาลดลง */
+    filter: brightness(0.9); /* เข้มขึ้น */
+}
+
+/* --- Animation สำหรับปุ่ม "ย้อนกลับ" ที่เป็นไอคอนบนซ้าย --- */
+
+/* ส่วนนี้คุณมีอยู่แล้ว แต่ถ้าอยากเพิ่ม effect ตอนกด ก็ใส่ .active เข้าไป */
+.content > div > div:first-child[onclick]:hover { /* ตัวที่ครอบลูกศรและหัวข้อ */
+    color: #d9534f; /* เปลี่ยนสีเป็นส้ม */
+    transform: scale(1.02); /* ขยายเล็กน้อย */
+}
+.content > div > div:first-child[onclick]:active {
+    transform: scale(0.98); /* หดลงเล็กน้อยตอนกด */
+    color: #c9302c; /* สีส้มเข้มขึ้นตอนกด */
+}
     </style>
     </head>
     <body>
@@ -126,7 +205,8 @@
                         </div>
 
                         <div class="form-group">
-                            <label for="startTime" class="required">เวลาเริ่ม</label>
+                            <label for="startTime"
+                                class="required">เวลาเริ่ม</label>
                             <div class="input-icon-group">
                                 <input type="text" id="startTime"
                                     name="startTime" required
@@ -137,7 +217,8 @@
                         </div>
 
                         <div class="form-group">
-                            <label for="endTime" class="required">เวลาสิ้นสุด</label>
+                            <label for="endTime"
+                                class="required">เวลาสิ้นสุด</label>
                             <div class="input-icon-group">
                                 <input type="text" id="endTime"
                                     name="endTime" required
@@ -168,7 +249,7 @@
                         <div class="form-group">
                             <label for="semester" class="required">เทอม</label>
                             <select id="semester" name="semester" required>
-                                <option value="">เลือกเทอม</option>
+                                <option value>เลือกเทอม</option>
                                 <option value="1">เทอม 1</option>
                                 <option value="2">เทอม 2</option>
                             </select>
