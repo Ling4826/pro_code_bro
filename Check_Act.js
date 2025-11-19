@@ -25,10 +25,7 @@ async function fetchActivities() {
                 .addEventListener("click", () => exportToExcel(activities));
 
             LoadDate(activities);
-            await Promise.all([
-                Promise.resolve().then(() => setupFilters(activities)),
-                Promise.resolve().then(() => RenderTable(activities))
-            ]);
+            setupFilters(activities);
             return;
         } else {
             console.log("หมดอายุ cache, ดึงข้อมูลใหม่");
@@ -85,16 +82,20 @@ async function fetchActivities() {
         .addEventListener("click", () => exportToExcel(activities));
 
     LoadDate(activities);
-    await Promise.all([
-        Promise.resolve().then(() => setupFilters(activities)),
-        Promise.resolve().then(() => RenderTable(activities))
-    ]);
+    setupFilters(activities);
 }
 
 function formatTime(ts) {
     return new Date(ts).toLocaleTimeString('th-TH', {
         hour: '2-digit',
         minute: '2-digit'
+    });
+}
+function formatDate(ts) {
+    return new Date(ts).toLocaleDateString('th-TH', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
     });
 }
 async function loadCache() {
@@ -154,10 +155,6 @@ function LoadDate(activities) {
         years.add(d.getFullYear() + 543);
     });
 
-    // ล้างก่อน
-    daySelect.innerHTML = '';
-    monthSelect.innerHTML = '';
-    yearSelect.innerHTML = '';
 
     // สร้าง option
     days.forEach(d => daySelect.innerHTML += `<option value="${d}">${d}</option>`);
@@ -171,9 +168,9 @@ function setupFilters(activities) {
     const yearSelect = document.getElementById('yearSelect');
 
     // ค่าเริ่มต้นเป็นค่าว่างทั้งหมด
-    daySelect.value = "";
-    monthSelect.value = "";
-    yearSelect.value = "";
+    daySelect.value = "15";
+    monthSelect.value = "6";
+    yearSelect.value = "2568";
 
     function applyFilter() {
         const dVal = daySelect.value;
@@ -181,7 +178,8 @@ function setupFilters(activities) {
         const yVal = yearSelect.value;
 
         const filtered = activities.filter(act => {
-            const d = new Date(act.start_time);
+            const d = toLocalDate(act.start_time);
+
 
             const day = d.getDate();
             const month = d.getMonth() + 1;
@@ -193,7 +191,7 @@ function setupFilters(activities) {
 
             return matchDay && matchMonth && matchYear;
         });
-
+console.log("filter values:", dVal, mVal, yVal);
         RenderTable(filtered);
     }
 
@@ -202,10 +200,16 @@ function setupFilters(activities) {
     monthSelect.addEventListener('change', applyFilter);
     yearSelect.addEventListener('change', applyFilter);
 
+
     // เรียก RenderTable ครั้งแรกแบบไม่กรอง
-    RenderTable(activities);
+    applyFilter();
 }
 
+
+function toLocalDate(dateString) {
+    const d = new Date(dateString);
+    return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+}
 
 
 function RenderTable(activities) {
@@ -216,12 +220,11 @@ function RenderTable(activities) {
     const rows = activities.map(act => {
         const startTime = formatTime(act.start_time);
         const endTime = formatTime(act.end_time);
-
+        const Date = formatDate(act.start_time);
         const major = act.class?.major?.name ?? null;
         const level = act.class?.major?.level ?? null;
         const year = act.class?.year ?? null;
         const className = act.class?.class_name ?? null;
-
         let totalStudents = 0;
         let attendedCount = 0;
 
@@ -261,11 +264,12 @@ function RenderTable(activities) {
         return `
         <tr>
             <td>${act.name}</td>
+            <td>${Date}</td>
             <td>${startTime} - ${endTime}</td>
-            <td>${major ?? 'ทั้งโรงเรียน'}</td>
-            <td>${level ?? '-'}</td>
-            <td>${year ?? '-'}</td>
-            <td>${className ?? '-'}</td>
+            <td>${major ?? 'ทุกสาขา'}</td>
+            <td>${level ?? 'ทุกระดับ'}</td>
+            <td>${year ?? 'ทุกปี'}</td>
+            <td>${className ?? 'ทุกห้อง'}</td>
             <td class="status-cell ${statusChecks === "เช็กครบ" ? "checked" : "unchecked"}">
                 ${statusChecks}
             </td>
