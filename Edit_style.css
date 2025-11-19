@@ -309,9 +309,9 @@ body {
 
 /* *** END: CSS สำหรับหน้าตาราง (สรุปผลและข้อมูลสาขา) ***
 */
-        .form-row {
+       .form-row {
             display: flex;
-            align-items: center;
+            align-items: flex-start; /* เปลี่ยนจาก center เป็น flex-start เพื่อให้ทุกกล่องชิดขอบบนเท่ากัน */
             margin-bottom: 25px;
             gap: 20px;
         }
@@ -321,6 +321,7 @@ body {
             flex: 1;
             min-width: 250px;
         }
+        /* กำหนดความสูง Input ให้เท่ากันแน่นอน ทั้งช่องปกติและช่องที่มีไอคอน */
         .form-group input, .form-group select {
             padding: 10px 12px;
             border: 1px solid #ccc;
@@ -328,6 +329,7 @@ body {
             font-size: 16px;
             box-sizing: border-box;
             width: 100%;
+            height: 45px; /* เพิ่มบรรทัดนี้: ล็อคความสูงให้เท่ากันทุกช่อง */
         }
         .required::before {
             content: '*';
@@ -349,14 +351,20 @@ body {
             cursor: pointer;
             margin-top: 20px;
         }
-        /* เพิ่มสไตล์สำหรับไอคอนใน input */
+        /* ปรับแต่งกลุ่มที่มีไอคอนให้ขยายเต็มพื้นที่ */
         .input-icon-group {
             position: relative;
             width: 100%;
+            display: block; /* ตรวจสอบว่าเป็น block หรือ flex เพื่อให้เต็มความกว้าง */
         }
+        
+        /* ให้ Input ในกลุ่มไอคอนมีความสูงเท่ากับข้างบน */
         .input-icon-group input {
             padding-right: 35px;
+            width: 100%;
+            height: 45px; /* ต้องเท่ากับ .form-group input ด้านบน */
         }
+
         .input-icon-group i {
             position: absolute;
             right: 12px;
@@ -364,6 +372,7 @@ body {
             transform: translateY(-50%);
             color: #777;
             pointer-events: none;
+            z-index: 2; /* ดันไอคอนมาข้างหน้าเผื่อโดนบัง */
         }
        .attendance-table {
     border-collapse: collapse;
@@ -455,4 +464,75 @@ input[type="radio"]:checked + label.late-btn::after {
     font-size: 16px;
     z-index: 1; /* ให้เหนือพื้นหลัง */
     pointer-events: none; /* ไม่ขัดกับการคลิก */
+}
+.create-button {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: bold;
+    color: white;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    background-color: #337ab7; /* สีปุ่ม "บันทึกการทำเบียน" */
+    
+    transition: all 0.2s ease-out;
+}
+
+/* เมื่อเมาส์ชี้ที่ปุ่ม "บันทึกการทำเบียน" */
+.create-button:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 12px rgba(0, 0, 0, 0.2);
+    filter: brightness(1.1);
+}
+
+/* เมื่อกดปุ่ม "บันทึกการทำเบียน" */
+.create-button:active {
+    transform: translateY(1px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    filter: brightness(0.9);
+}
+
+
+/* 2. ปุ่ม "บันทึกเป็น Excel" ด้านบนขวา */
+/* ใช้ ID เพื่อความเฉพาะเจาะจง */
+#exportExcelBtn {
+    background-color: #2ecc71; /* สีปุ่ม Excel */
+    margin: 0 !important; /* ทับ margin เดิม */
+    width: auto !important;
+    padding: 10px 20px !important;
+    height: 40px !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 10px !important;
+    
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: bold;
+    color: white;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    transition: all 0.2s ease-out;
+}
+
+/* เมื่อเมาส์ชี้ที่ปุ่ม "บันทึกเป็น Excel" */
+#exportExcelBtn:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 12px rgba(0, 0, 0, 0.2);
+    filter: brightness(1.1);
+}
+
+/* เมื่อกดปุ่ม "บันทึกเป็น Excel" */
+#exportExcelBtn:active {
+    transform: translateY(1px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    filter: brightness(0.9);
+}
+
+/* 3. ปุ่ม "ย้อนกลับ" ที่เป็นไอคอนบนซ้าย */
+/* ถ้าต้องการเพิ่ม Animation ตอนกด (Active) */
+.content > div > div:first-child[onclick]:active {
+    transform: scale(0.98); /* หดลงเล็กน้อยตอนกด */
+    color: #c9302c; /* สีส้มเข้มขึ้นตอนกด */
 }
