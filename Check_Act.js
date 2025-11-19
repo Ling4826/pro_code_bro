@@ -15,6 +15,7 @@ async function fetchActivities() {
     // เช็ก cache ก่อน
     const cached = localStorage.getItem(CACHE_KEY);
     if (cached) {
+        const start = performance.now();
         const parsed = JSON.parse(cached);
         const now = new Date().getTime();
         if (now - parsed.timestamp < CACHE_TTL) {
@@ -26,6 +27,8 @@ async function fetchActivities() {
 
             LoadDate(activities);
             setupFilters(activities);
+            const end = performance.now();
+            console.log(`fetchData จาก cache ใช้เวลา ${(end - start).toFixed(3)} ms`);
             return;
         } else {
             console.log("หมดอายุ cache, ดึงข้อมูลใหม่");
