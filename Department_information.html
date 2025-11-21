@@ -14,6 +14,117 @@
     .filter-controls select {
         width: 200px;
     }
+        /* =========================================
+           1. สไตล์พื้นฐาน (Desktop)
+           ========================================= */
+        
+        /* กรอบรวมตัวกรอง */
+        .filter-controls {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 25px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            
+            /* ใช้ Flexbox เรียงแนวนอน */
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            align-items: flex-end; 
+        }
+
+        /* กลุ่มหัวข้อ+ช่องเลือก */
+        .filter-group {
+            display: flex;
+            flex-direction: column; /* หัวข้ออยู่บน ช่องเลือกอยู่ล่าง */
+            gap: 5px;
+        }
+
+        /* หัวข้อ */
+        .filter-group label {
+            font-weight: bold;
+            font-size: 14px;
+            color: #333;
+        }
+
+        /* ช่องเลือก */
+        .filter-group select {
+            padding: 0 10px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            min-width: 180px; /* กว้างหน่อย */
+            height: 40px;
+            font-size: 14px;
+            background-color: #fff;
+            cursor: pointer;
+        }
+
+        .filter-group select:focus {
+            border-color: #d9534f;
+            outline: none;
+        }
+
+        /* ตารางข้อมูล */
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            background-color: #fff;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .data-table th, .data-table td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+
+        .data-table th {
+            background-color: #f8f9fa;
+            font-weight: bold;
+            color: #555;
+        }
+        
+        .data-table tr:hover {
+            background-color: #f9f9f9;
+        }
+
+
+        /* =========================================
+           2. ส่วนมือถือ (Mobile Layout)
+           ========================================= */
+        @media screen and (max-width: 768px) {
+            
+            /* ปรับตัวกรองให้เรียงแนวตั้งเต็มจอ */
+            .filter-controls {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 15px;
+                padding: 15px;
+            }
+
+            .filter-group {
+                width: 100%;
+            }
+
+            .filter-group select {
+                width: 100%;
+            }
+
+            /* ปรับตารางให้เลื่อนซ้ายขวาได้ (Scrollable) */
+            .content {
+                overflow-x: auto; /* อนุญาตให้เลื่อน */
+                padding: 15px;
+            }
+            
+            .data-table {
+                display: block;
+                width: 100%;
+                overflow-x: auto; /* เลื่อนเฉพาะตาราง */
+                white-space: nowrap; /* ห้ามตัดคำ */
+            }
+        }
   </style>
     </head>
     <body>
@@ -38,14 +149,13 @@
                         <span>สร้างกิจกรรม</span></a>
 
                     <a href="edit_delete_activity.html"><i
-                            class="fas fa-list-alt"></i> <span>แก้ไข /
-                            ลบกิจกรรม</span></a>
+                            class="fas fa-list-alt"></i> <span>รายการกิจกรรม</span></a>
                     <a href="check_activity.html"><i
                             class="fas fa-clipboard-check"></i>
-                        <span>ตรวจสอบกิจกรรม</span></a>
+                        <span>ภาพรวมกิจกรรม</span></a>
                     <a href="Department_information.html" class="active"><i
                             class="fas fa-building"></i>
-                        <span>ข้อมูลสาขา</span></a>
+                        <span>ผู้ช่วยอาจารย์</span></a>
                     <a href="Term_results_summary.html"><i
                             class="fas fa-poll"></i> <span>สรุปผลเทอม</span></a>
                     <a href="#" class="logout"><i
@@ -57,25 +167,34 @@
             <div class="content">
                 <h2 class="page-title">ข้อมูลสาขา</h2>
 
-                <div class="filter-controls">
-                    <label for="level">ระดับ</label>
-                    <select id="level" class="filter-select">
-                        <option value>เลือกระดับ</option>
-                    </select>
+               <div class="filter-controls">
+                    <div class="filter-group">
+                        <label for="level">ระดับ</label>
+                        <select id="level">
+                            <option value>เลือกระดับ</option>
+                        </select>
+                    </div>
 
-                    <label for="studentYear">ชั้นปี</label>
-                    <select id="studentYear" class="filter-select">
-                        <option value>เลือกชั้นปี</option>
-                    </select>
+                    <div class="filter-group">
+                        <label for="studentYear">ชั้นปี</label>
+                        <select id="studentYear">
+                            <option value>เลือกชั้นปี</option>
+                        </select>
+                    </div>
 
-                    <label for="department">สาขา</label>
-                    <select id="department" class="filter-select">
-                        <option value>เลือกสาขา</option>
-                    </select>
-                    <label for="classNumber">ห้อง</label>
-                    <select id="classNumber" class="filter-select">
-                        <option value>เลือกห้อง</option>
-                    </select>
+                    <div class="filter-group">
+                        <label for="department">สาขา</label>
+                        <select id="department">
+                            <option value>เลือกสาขา</option>
+                        </select>
+                    </div>
+
+                    <div class="filter-group">
+                        <label for="classNumber">ห้อง</label>
+                        <select id="classNumber">
+                            <option value>เลือกห้อง</option>
+                        </select>
+                    </div>
                 </div>
 
                 <table class="data-table">
@@ -96,27 +215,42 @@
 
         <script>
        const toggleBtn = document.getElementById('sidebarToggle');
-        const sidebar = document.getElementById('sidebar');
+    const sidebar = document.getElementById('sidebar');
 
-        // 1. ตรวจสอบความจำ (localStorage) ตอนโหลดหน้าเว็บ
-        // ถ้าในความจำบอกว่า 'collapsed' ให้หุบเมนูทันที
+    // ฟังก์ชันตรวจสอบขนาดจอและตั้งค่าเมนู
+    function initSidebar() {
+        const isMobile = window.innerWidth <= 1024; // เช็คว่าเป็นมือถือ/ไอแพดหรือไม่
         const savedState = localStorage.getItem('sidebarState');
-        if (savedState === 'collapsed') {
-            sidebar.classList.add('collapsed');
-        }
 
-        // 2. เมื่อกดปุ่ม
-        toggleBtn.addEventListener('click', () => {
-            // สลับ class
-            sidebar.classList.toggle('collapsed');
-
-            // 3. บันทึกสถานะล่าสุดลงความจำ
-            if (sidebar.classList.contains('collapsed')) {
-                localStorage.setItem('sidebarState', 'collapsed'); // จำว่า "หุบ"
+        if (isMobile) {
+            // บนมือถือ: เริ่มต้นต้อง "หุบ" (collapsed) เสมอ เพื่อไม่ให้บังเนื้อหา
+            sidebar.classList.add('collapsed'); 
+        } else {
+            // บนคอม: เอาตามที่เคยจำไว้ (ถ้าจำว่าหุบ ก็หุบ)
+            if (savedState === 'collapsed') {
+                sidebar.classList.add('collapsed');
             } else {
-                localStorage.setItem('sidebarState', 'expanded');  // จำว่า "กาง"
+                sidebar.classList.remove('collapsed');
             }
-        });
+        }
+    }
+
+    // เรียกใช้ตอนเปิดเว็บ
+    initSidebar();
+
+    // เมื่อกดปุ่ม
+    toggleBtn.addEventListener('click', () => {
+        sidebar.classList.toggle('collapsed');
+        
+        // บันทึกสถานะ (เฉพาะตอนใช้คอม มือถือไม่ต้องจำ เพราะควรปิดเสมอตอนเริ่ม)
+        if (window.innerWidth > 1024) {
+            if (sidebar.classList.contains('collapsed')) {
+                localStorage.setItem('sidebarState', 'collapsed');
+            } else {
+                localStorage.setItem('sidebarState', 'expanded');
+            }
+        }
+    });
 
     </script>
     </body>
