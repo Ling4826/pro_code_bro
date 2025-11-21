@@ -536,3 +536,46 @@ input[type="radio"]:checked + label.late-btn::after {
     transform: scale(0.98); /* หดลงเล็กน้อยตอนกด */
     color: #c9302c; /* สีส้มเข้มขึ้นตอนกด */
 }
+
+#sidebarToggle {
+    cursor: pointer;
+    font-size: 24px;
+    margin-right: 15px;
+    transition: color 0.2s;
+}
+
+#sidebarToggle:hover {
+    color: #f0f0f0; /* สีตอนเอาเมาส์ชี้ */
+}
+
+/* เพิ่ม Transition ให้ Sidebar ยืดหดนุ่มนวล */
+.sidebar {
+    transition: width 0.3s ease;
+    overflow: hidden; /* ซ่อนส่วนที่เกิน */
+    white-space: nowrap; /* ห้ามขึ้นบรรทัดใหม่ */
+}
+
+/* --- สไตล์ตอนหุบ (Collapsed State) --- */
+.sidebar.collapsed {
+    width: 60px; /* หดเหลือแค่ความกว้างไอคอน */
+}
+
+.sidebar.collapsed a {
+    text-align: center; /* จัดไอคอนให้อยู่ตรงกลาง */
+    padding-left: 0;
+    padding-right: 0;
+}
+
+.sidebar.collapsed a span {
+    display: none; /* ซ่อนข้อความใน <span> */
+}
+
+.sidebar.collapsed a i {
+    margin-right: 0; /* เอาช่องว่างขวาของไอคอนออก */
+    font-size: 20px; /* ปรับขนาดไอคอนให้พอดี */
+}
+
+/* ปรับแต่งส่วน Logo ตอนหุบ (ถ้าต้องการ) */
+.sidebar.collapsed ~ .content {
+    /* Content จะขยายเต็มพื้นที่เองเพราะใช้ Flexbox อยู่แล้ว */
+}

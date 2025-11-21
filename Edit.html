@@ -26,32 +26,39 @@
 <body>
    <div class="header">
             <div class="logo-area">
+                <i class="fas fa-bars" id="sidebarToggle"></i>
+
                 <img src="pbntc-logo.webp" alt="PBNTC Logo" class="logo">
                 PBNTC
             </div>
         </div>
-    
-    <div class="main-container">
-        <div class="sidebar">
-            <nav>
-               <a href="index.html"><i class="fas fa-home"></i>
-                        หน้าหลัก</a>
-                    <a href="create_activity.html"><i class="fas fa-edit"></i>
-                        สร้างกิจกรรม</a>
+
+        <div class="main-container">
+            <div class="sidebar" id="sidebar">
+                <nav>
+                    <a href="index.html"><i class="fas fa-home"></i>
+                        <span>หน้าหลัก</span></a>
+
+                    <a href="create_activity.html"><i
+                            class="fas fa-edit"></i>
+                        <span>สร้างกิจกรรม</span></a>
+
                     <a href="edit_delete_activity.html" class="active"><i
-                            class="fas fa-list-alt"></i> แก้ไข / ลบกิจกรรม</a>
+                            class="fas fa-list-alt"></i> <span>แก้ไข /
+                            ลบกิจกรรม</span></a>
                     <a href="check_activity.html"><i
                             class="fas fa-clipboard-check"></i>
-                        ตรวจสอบกิจกรรม</a>
-                    <a href="Department_information.html"><i
-                            class="fas fa-building"></i> ข้อมูลสาขา</a>
+                        <span>ตรวจสอบกิจกรรม</span></a>
+                    <a href="Department_information.html" ><i
+                            class="fas fa-building"></i>
+                        <span>ข้อมูลสาขา</span></a>
                     <a href="Term_results_summary.html"><i
-                            class="fas fa-poll"></i> สรุปผลเทอม</a>
+                            class="fas fa-poll"></i> <span>สรุปผลเทอม</span></a>
                     <a href="#" class="logout"><i
                             class="fas fa-sign-out-alt"></i>
-                        ลงชื่อเข้าใช้ออก</a>
-            </nav>
-        </div>
+                        <span>ลงชื่อเข้าใช้ออก</span></a>
+                </nav>
+            </div>
 
        <div class="content">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; padding-bottom: 15px; border-bottom: 1px solid #eee;">
@@ -202,6 +209,30 @@
             dateFormat: "d/m/Y",
             locale: "th"
         });
+       const toggleBtn = document.getElementById('sidebarToggle');
+        const sidebar = document.getElementById('sidebar');
+
+        // 1. ตรวจสอบความจำ (localStorage) ตอนโหลดหน้าเว็บ
+        // ถ้าในความจำบอกว่า 'collapsed' ให้หุบเมนูทันที
+        const savedState = localStorage.getItem('sidebarState');
+        if (savedState === 'collapsed') {
+            sidebar.classList.add('collapsed');
+        }
+
+        // 2. เมื่อกดปุ่ม
+        toggleBtn.addEventListener('click', () => {
+            // สลับ class
+            sidebar.classList.toggle('collapsed');
+
+            // 3. บันทึกสถานะล่าสุดลงความจำ
+            if (sidebar.classList.contains('collapsed')) {
+                localStorage.setItem('sidebarState', 'collapsed'); // จำว่า "หุบ"
+            } else {
+                localStorage.setItem('sidebarState', 'expanded');  // จำว่า "กาง"
+            }
+        });
+
     </script>
+    
 </body>
 </html>

@@ -1,64 +1,142 @@
 <!DOCTYPE html>
 <html lang="th">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>หน้าหลัก - PBNTC Activity System</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <link rel="stylesheet" href="style.css">
-</head>
-<body>
-   <div class="header">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>หน้าหลัก - PBNTC Activity System</title>
+        <link rel="stylesheet"
+            href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+        <link rel="stylesheet" href="style.css">
+    </head>
+
+    <body>
+
+        <div class="header">
             <div class="logo-area">
+                <i class="fas fa-bars" id="sidebarToggle"></i>
+
                 <img src="pbntc-logo.webp" alt="PBNTC Logo" class="logo">
                 PBNTC
             </div>
         </div>
-    <div class="main-container">
-        <div class="sidebar">
-            <nav>
-                <a href="index.html" class="active"><i class="fas fa-home"></i> หน้าหลัก</a>
-                <a href="create_activity.html"><i class="fas fa-edit"></i> สร้างกิจกรรม</a>
-                <a href="edit_delete_activity.html"><i class="fas fa-list-alt"></i> แก้ไข / ลบกิจกรรม</a>
-                <a href="check_activity.html"><i class="fas fa-clipboard-check"></i> ตรวจสอบกิจกรรม</a>
-                <a href="Department_information.html"><i class="fas fa-building"></i> ข้อมูลสาขา</a>
-                <a href="Term_results_summary.html"><i class="fas fa-poll"></i> สรุปผลเทอม</a>
-                <a href="#" class="logout"><i class="fas fa-sign-out-alt"></i> ลงชื่อเข้าใช้ออก</a>
-            </nav>
-        </div>
 
-        <div class="content">
-            <div class="time-display">
-                วัน อาทิตย์ ที่ 8 เดือน พฤศจิกายน พ.ศ. 2568 เวลา 12:30:29
+        <div class="main-container">
+
+            <div class="sidebar" id="sidebar">
+                <nav>
+                    <a href="index.html" class="active"><i
+                            class="fas fa-home"></i> <span>หน้าหลัก</span></a>
+                    <a href="create_activity.html"><i class="fas fa-edit"></i>
+                        <span>สร้างกิจกรรม</span></a>
+                    <a href="edit_delete_activity.html"><i
+                            class="fas fa-list-alt"></i> <span>แก้ไข /
+                            ลบกิจกรรม</span></a>
+                    <a href="check_activity.html"><i
+                            class="fas fa-clipboard-check"></i>
+                        <span>ตรวจสอบกิจกรรม</span></a>
+                    <a href="Department_information.html"><i
+                            class="fas fa-building"></i>
+                        <span>ข้อมูลสาขา</span></a>
+                    <a href="Term_results_summary.html"><i
+                            class="fas fa-poll"></i> <span>สรุปผลเทอม</span></a>
+                    <a href="#" class="logout"><i
+                            class="fas fa-sign-out-alt"></i>
+                        <span>ลงชื่อเข้าใช้ออก</span></a>
+                </nav>
             </div>
+
+            <div class="content">
+                <div class="time-display" id="realTimeDisplay">
+                    กำลังโหลดเวลา...
+                </div>
+
+                <div class="function-grid">
+                    <a href="create_activity.html" class="function-block blue">
+                        <i class="fas fa-file-alt"></i>
+                        <span>สร้างกิจกรรม</span>
+                    </a>
+
+                    <a href="edit_delete_activity.html"
+                        class="function-block red">
+                        <i class="fas fa-edit"></i>
+                        <span>แก้ไข / ลบกิจกรรม</span>
+                    </a>
+
+                    <a href="check_activity.html" class="function-block green">
+                        <i class="fas fa-clipboard-check"></i>
+                        <span>ตรวจสอบกิจกรรม</span>
+                    </a>
+
+                    <a href="Department_information.html"
+                        class="function-block orange">
+                        <i class="fas fa-building"></i>
+                        <span>ข้อมูลสาขา</span>
+                    </a>
+
+                    <a href="Term_results_summary.html"
+                        class="function-block purple">
+                        <i class="fas fa-poll"></i>
+                        <span>สรุปผลเทอม</span>
+                    </a>
+                </div>
+            </div> </div> <script>
+        // --- ส่วนจัดการปุ่มเมนู (โค้ดเดิม) ---
+        const toggleBtn = document.getElementById('sidebarToggle');
+        const sidebar = document.getElementById('sidebar');
+
+        // 1. ตรวจสอบความจำ (localStorage) ตอนโหลดหน้าเว็บ
+        // ถ้าในความจำบอกว่า 'collapsed' ให้หุบเมนูทันที
+        const savedState = localStorage.getItem('sidebarState');
+        if (savedState === 'collapsed') {
+            sidebar.classList.add('collapsed');
+        }
+
+        // 2. เมื่อกดปุ่ม
+        toggleBtn.addEventListener('click', () => {
+            // สลับ class
+            sidebar.classList.toggle('collapsed');
+
+            // 3. บันทึกสถานะล่าสุดลงความจำ
+            if (sidebar.classList.contains('collapsed')) {
+                localStorage.setItem('sidebarState', 'collapsed'); // จำว่า "หุบ"
+            } else {
+                localStorage.setItem('sidebarState', 'expanded');  // จำว่า "กาง"
+            }
+        });
+
+        // --- ส่วนนาฬิกาเดิน (โค้ดใหม่ที่เพิ่ม) ---
+        function updateClock() {
+            const now = new Date();
             
-            <div class="function-grid">
-                <a href="create_activity.html" class="function-block blue">
-                    <i class="fas fa-file-alt"></i>
-                    <span>สร้างกิจกรรม</span>
-                </a>
-                
-                <a href="edit_delete_activity.html" class="function-block red">
-                    <i class="fas fa-edit"></i>
-                    <span>แก้ไข / ลบกิจกรรม</span>
-                </a>
+            // กำหนดชื่อวันและเดือนภาษาไทย
+            const days = ['อาทิตย์', 'จันทร์', 'อังคาร', 'พุธ', 'พฤหัสบดี', 'ศุกร์', 'เสาร์'];
+            const months = [
+                'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
+                'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'
+            ];
 
-                <a href="check_activity.html" class="function-block green">
-                    <i class="fas fa-clipboard-check"></i>
-                    <span>ตรวจสอบกิจกรรม</span>
-                </a>
+            const dayName = days[now.getDay()];
+            const date = now.getDate();
+            const monthName = months[now.getMonth()];
+            const year = now.getFullYear() + 543; // แปลง ค.ศ. เป็น พ.ศ.
+            
+            // ดึงเวลาและเติมเลข 0 ข้างหน้าถ้าต่ำกว่า 10 (เช่น 09:05:01)
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const seconds = String(now.getSeconds()).padStart(2, '0');
 
-                <a href="Department_information.html" class="function-block orange">
-                    <i class="fas fa-building"></i>
-                    <span>ข้อมูลสาขา</span>
-                </a>
-                
-                <a href="Term_results_summary.html" class="function-block purple">
-                    <i class="fas fa-poll"></i>
-                    <span>สรุปผลเทอม</span>
-                </a>
-            </div>
-        </div>
-    </div>
-</body>
+            // ประกอบข้อความ
+            const timeString = `วัน ${dayName} ที่ ${date} เดือน ${monthName} พ.ศ. ${year} เวลา ${hours}:${minutes}:${seconds}`;
+
+            // นำไปแสดงที่หน้าจอ
+            document.getElementById('realTimeDisplay').innerText = timeString;
+        }
+
+        // สั่งให้ฟังก์ชันทำงานทุกๆ 1 วินาที (1000 ms)
+        setInterval(updateClock, 1000);
+        
+        // เรียกทำงานครั้งแรกทันที ไม่ต้องรอ 1 วิ
+        updateClock();
+    </script>
+    </body>
 </html>
