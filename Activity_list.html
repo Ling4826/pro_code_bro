@@ -3,15 +3,15 @@
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>แก้ไข / ลบกิจกรรม - PBNTC Activity System</title>
+        <title>รายการกิจกรรม - PBNTC Activity System</title>
         <link rel="stylesheet"
             href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-        <link rel="stylesheet" href="style.css">
-       <script 
-    src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-            
-        <script src="script.js"></script>
-      <style>
+        <link rel="stylesheet" href="CSS//style.css">
+        <script
+            src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+        <script src="JavaScript//Activity_list.js"></script>
+        <style>
         /* =========================================
            1. สไตล์พื้นฐาน (Desktop)
            ========================================= */
@@ -118,19 +118,43 @@
             display: flex; flex-wrap: wrap; gap: 20px; 
         }
 
-        .activity-card { 
-            width: 280px; 
-            background-color: #337ab7; 
-            color: white; 
-            border-radius: 10px; 
-            padding: 20px; 
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1); 
-            position: relative; 
-            transition: transform 0.2s;
-            display: flex; flex-direction: column; min-height: 180px;
-        }
+        .activity-card {
+    width: 280px;
+    
+    /* 1. ใช้ Gradient แทนสีพื้นเรียบๆ ให้ดูมีมิติ */
+    background: linear-gradient(145deg, #337ab7, #2a6699); 
+    
+    color: white;
+    border-radius: 12px; /* มนขึ้นอีกนิด */
+    padding: 20px;
+    
+    /* 2. เงาพื้นฐาน ให้ชัดกว่าเดิมนิดหน่อย */
+    box-shadow: 0 10px 20px rgba(0,0,0,0.1); 
+    
+    /* เพิ่มขอบจางๆ ให้ตัดกับพื้นหลัง */
+    border: 1px solid rgba(255, 255, 255, 0.1); 
+    
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    min-height: 180px;
+            cursor: pointer;
+    /* Animation นุ่มนวล */
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); 
+}
         
-        .activity-card:hover { transform: translateY(-5px); }
+        .activity-card:hover {
+    /* 3. ยกกล่องให้ลอยสูงขึ้นชัดเจน */
+    transform: translateY(-10px) scale(1.02); 
+    
+    /* สร้างออร่าสีฟ้าฟุ้งๆ รอบกล่อง */
+    box-shadow: 0 20px 40px rgba(51, 122, 183, 0.4); 
+    
+    /* ขอบสว่างขึ้น */
+    border-color: rgba(255, 255, 255, 0.4);
+    
+    z-index: 10; /* ให้ลอยทับเพื่อนข้างๆ (เผื่อวางซ้อนกัน) */
+}
 
         .card-actions {
             margin-top: auto; display: flex; justify-content: flex-end; gap: 10px; padding-top: 15px;
@@ -154,6 +178,34 @@
             .activity-card { width: 100%; margin-bottom: 15px; }
             .content { padding: 15px; }
         }
+
+        /* =========================================
+   3. เอฟเฟกต์ปุ่ม Action (แก้ไข/ลบ)
+   ========================================= */
+
+/* 1. ปุ่มแก้ไข (สีเหลือง) */
+/* รองรับทั้ง fa-edit และ fa-pen เผื่อ FontAwesome เวอร์ชั่นต่างกัน */
+.card-actions .fa-edit:hover,
+.card-actions .fa-pen:hover {
+    background-color: #ffc107 !important;  /* พื้นหลังสีเหลือง */
+    color: #333 !important;                /* เปลี่ยนสีไอคอนเป็นสีเข้มให้อ่านง่าย */
+    box-shadow: 0 0 15px #ffc107,          /* ออร่าชั้นที่ 1 */
+                0 0 25px rgba(255, 193, 7, 0.6); /* ออร่าชั้นที่ 2 (จางกว่า) */
+    transform: scale(1.15) rotate(-5deg);  /* ขยายและเอียงนิดหน่อยให้ดูมีลูกเล่น */
+    border: 1px solid #e0a800;
+}
+
+/* 2. ปุ่มลบ (สีแดง) */
+/* รองรับทั้ง fa-trash และ fa-trash-alt */
+.card-actions .fa-trash:hover,
+.card-actions .fa-trash-alt:hover {
+    background-color: #dc3545 !important;  /* พื้นหลังสีแดง */
+    color: white !important;               /* ไอคอนสีขาว */
+    box-shadow: 0 0 15px #dc3545,          /* ออร่าสีแดง */
+                0 0 25px rgba(220, 53, 69, 0.6);
+    transform: scale(1.15) rotate(5deg);   /* ขยายและเอียงไปอีกทาง */
+    border: 1px solid #c82333;
+}
     </style>
     </head>
     <body>
@@ -167,21 +219,20 @@
         </div>
 
         <div class="main-container">
+
             <div class="sidebar" id="sidebar">
                 <nav>
-                    <a href="index.html"><i class="fas fa-home"></i>
-                        <span>หน้าหลัก</span></a>
-
-                    <a href="create_activity.html"><i
-                            class="fas fa-edit"></i>
+                    <a href="index.html"><i
+                            class="fas fa-home"></i> <span>หน้าหลัก</span></a>
+                    <a href="Create_activity.html"><i class="fas fa-edit"></i>
                         <span>สร้างกิจกรรม</span></a>
-
-                    <a href="edit_delete_activity.html" class="active"><i
-                            class="fas fa-list-alt"></i> <span>รายการกิจกรรม</span></a>
-                    <a href="check_activity.html"><i
+                    <a href="Activity_list.html" class="active"><i
+                            class="fas fa-list-alt"></i>
+                        <span>รายการกิจกรรม</span></a>
+                    <a href="Overview_activity.html"><i
                             class="fas fa-clipboard-check"></i>
                         <span>ภาพรวมกิจกรรม</span></a>
-                    <a href="Department_information.html"><i
+                    <a href="Professor_Assistant.html"><i
                             class="fas fa-building"></i>
                         <span>ผู้ช่วยอาจารย์</span></a>
                     <a href="Term_results_summary.html"><i
@@ -192,14 +243,14 @@
                 </nav>
             </div>
 
-            <div class="content">         
-                <h2 class="page-title">บันทึก /
-                            แก้ไขกิจกรรม</h2>
+            <div class="content">
+                <h2 class="page-title">รายการกิจกรรม</h2>
 
                 <div class="filter-controls">
                     <div class="search-input-group">
                         <i class="fas fa-search"></i>
-                        <input type="text" placeholder="ค้นหาชื่อกิจกรรม..." id="activityNameInput">
+                        <input type="text" placeholder="ค้นหาชื่อกิจกรรม..."
+                            id="activityNameInput">
                     </div>
 
                     <div class="filter-group">
@@ -222,7 +273,7 @@
                         <label for="department">สาขา</label>
                         <select id="department">
                             <option value>ทั้งหมด</option>
-                        </select>   
+                        </select>
                     </div>
 
                     <div class="filter-group">
@@ -296,5 +347,5 @@
     </script>
 
     </body>
-    
+
 </html>

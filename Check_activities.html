@@ -15,20 +15,104 @@
             src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/th.js"></script>
         <script
             src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-        <script src="Check_student.js"></script>
-        <link rel="stylesheet" href="Edit_style.css">
+        <script src="JavaScript//Check_activities.js"></script>
+        <link rel="stylesheet" href="CSS//Edit_style.css">
+        
+        <style>
+            /* สไตล์เสริมสำหรับการแสดงผลตารางเช็กชื่อ */
+            .attendance-table {
+                width: 100%;
+                border-collapse: collapse;
+                margin-top: 20px;
+                margin-bottom: 20px;
+            }
+            
+            .attendance-table th, .attendance-table td {
+                border: 1px solid #ddd;
+                padding: 10px;
+                text-align: center;
+            }
+
+            .attendance-table th {
+                background-color: #f2f2f2;
+                font-weight: bold;
+            }
+
+            /* =========================================
+               ส่วนรองรับมือถือ (Mobile Responsive)
+               ========================================= */
+            @media screen and (max-width: 1024px) {
+                
+                /* 1. หัวใจสำคัญ: เพิ่มพื้นที่ด้านล่างเยอะๆ ให้เลื่อนได้สุด */
+                .content {
+                    padding-bottom: 150px !important; /* ใส่เบาะรองก้น 150px */
+                    padding-left: 15px;
+                    padding-right: 15px;
+                    overflow-x: hidden; /* ป้องกันหน้าจอเลื่อนซ้ายขวา */
+                }
+
+                /* 2. ปรับฟอร์มให้เรียงแนวตั้ง ไม่บีบกัน */
+                .form-row {
+                    flex-direction: column;
+                    gap: 15px;
+                }
+
+                .form-group, .input-icon-group {
+                    width: 100% !important; /* ขยายเต็มจอ */
+                }
+                
+                .form-group input, 
+                .form-group select, 
+                .input-icon-group input {
+                    width: 100% !important;
+                }
+
+                /* 3. จัดกลุ่มเวลาให้ดูง่ายขึ้น */
+                .time-group {
+                    flex-direction: column;
+                    width: 100%;
+                }
+
+                /* 4. ปรับตารางให้เลื่อนซ้ายขวาได้ (ถ้าตกขอบ) */
+                .attendance-table {
+                    display: block;
+                    width: 100%;
+                    overflow-x: auto; /* อนุญาตให้เลื่อนแนวนอน */
+                    white-space: nowrap; /* ห้ามตัดคำ */
+                }
+
+                /* 5. ปรับปุ่มบันทึกให้กดง่ายๆ เต็มจอ */
+                .create-button {
+                    width: 100%;
+                    padding: 15px;
+                    font-size: 18px;
+                    margin-top: 20px;
+                    margin-bottom: 30px; /* ดันขอบล่างเพิ่มอีก */
+                }
+
+                /* ปรับส่วนหัวข้อและปุ่ม Excel ด้านบน */
+                .content > div:first-child {
+                    flex-direction: column;
+                    align-items: flex-start;
+                    gap: 15px;
+                }
+                
+                #exportExcelBtn {
+                    width: 100% !important;
+                    justify-content: center;
+                }
+            }
+        </style>
+
         <script>
-    // เรียกใช้ flatpickr สำหรับ date picker
-    flatpickr("#activityDate", {
-        dateFormat: "d/m/Y",
-        locale: "th"
-    });
-    
-    
-    
-</script>
-
-
+            // เรียกใช้ flatpickr สำหรับ date picker
+            document.addEventListener('DOMContentLoaded', function() {
+                flatpickr("#activityDate", {
+                    dateFormat: "d/m/Y",
+                    locale: "th"
+                });
+            });
+        </script>
     </head>
     <body>
           <div class="header">
@@ -41,21 +125,18 @@
         </div>
 
         <div class="main-container">
-            <div class="sidebar" id="sidebar">
+               <div class="sidebar" id="sidebar">
                 <nav>
-                    <a href="index.html"><i class="fas fa-home"></i>
-                        <span>หน้าหลัก</span></a>
-
-                    <a href="create_activity.html" ><i
-                            class="fas fa-edit"></i>
+                    <a href="index.html" class="active"><i
+                            class="fas fa-home"></i> <span>หน้าหลัก</span></a>
+                    <a href="Create_activity.html"><i class="fas fa-edit"></i>
                         <span>สร้างกิจกรรม</span></a>
-
-                    <a href="edit_delete_activity.html"class="active"><i
-                            class="fas fa-list-alt"></i> <span>รายการกิจกรรม</span></a>
-                    <a href="check_activity.html"><i
+                    <a href="Activity_list.html"><i
+                            class="fas fa-list-alt" class="active"></i> <span>รายการกิจกรรม</span></a>
+                    <a href="Overview_activity.html"><i
                             class="fas fa-clipboard-check"></i>
                         <span>ภาพรวมกิจกรรม</span></a>
-                    <a href="Department_information.html"><i
+                    <a href="Professor_Assistant.html"><i
                             class="fas fa-building"></i>
                         <span>ผู้ช่วยอาจารย์</span></a>
                     <a href="Term_results_summary.html"><i
@@ -72,7 +153,7 @@
 
                     <div
                         style="display: flex; align-items: center; gap: 15px; cursor: pointer; color: #333;"
-                        onclick="window.location.href='edit_delete_activity.html'"
+                        onclick="window.location.href='Activity_list.html'"
                         onmouseover="this.style.color='#d9534f'"
                         onmouseout="this.style.color='#333'">
 
@@ -136,32 +217,26 @@
                         </div>
                     </div>
 
-                    <div class="form-row">
+                   <div class="form-row">
                         <div class="form-group">
                             <label for="level">ระดับ</label>
                             <div class="input-icon-group">
-                                <select id="level" name="level" disabled>
-                                    <option value>เลือกระดับ</option>
+                                <select id="level" name="level" disabled> <option value>เลือกระดับ</option>
                                     <option value="ปวช.">ปวช.</option>
                                     <option value="ปวส.">ปวส.</option>
                                 </select>
-                                <i class="fas fa-check"></i>
-                            </div>
+                                </div>
                         </div>
 
                         <div class="form-group">
                             <label for="department">สาขา</label>
                             <div class="input-icon-group">
-                                <select id="department" name="department"
-                                    disabled>
-                                    <option value>เลือกสาขา</option>
+                                <select id="department" name="department" disabled> <option value>เลือกสาขา</option>
                                     <option value="1">ไฟฟ้า</option>
                                     <option value="2">ช่างยนต์</option>
                                 </select>
-                                <i class="fas fa-check"></i>
-                            </div>
+                                </div>
                         </div>
-
                     </div>
                     <div class="form-row">
                         <div class="form-group">
@@ -230,11 +305,6 @@
             </div>
         </div>
         <script>
-        // เรียกใช้ flatpickr สำหรับ date picker
-        flatpickr("#activityDate", {
-            dateFormat: "d/m/Y",
-            locale: "th"
-        });
         const toggleBtn = document.getElementById('sidebarToggle');
     const sidebar = document.getElementById('sidebar');
 

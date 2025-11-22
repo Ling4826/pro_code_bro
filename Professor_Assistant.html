@@ -3,13 +3,13 @@
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>ข้อมูลสาขา - PBNTC</title>
+        <title>ผู้ช่วยอาจารย์ - PBNTC</title>
         <link rel="stylesheet"
             href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-        <link rel="stylesheet" href="style.css">
+        <link rel="stylesheet" href="CSS//style.css">
         <script
             src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@1/dist/umd/supabase.js"></script>
-        <script src="department_script.js"></script>
+        <script src="JavaScript//Professor_Assistant.js"></script>
         <style>
     .filter-controls select {
         width: 200px;
@@ -139,21 +139,18 @@
         </div>
 
         <div class="main-container">
-            <div class="sidebar" id="sidebar">
+               <div class="sidebar" id="sidebar">
                 <nav>
-                    <a href="index.html"><i class="fas fa-home"></i>
-                        <span>หน้าหลัก</span></a>
-
-                    <a href="create_activity.html"><i
-                            class="fas fa-edit"></i>
+                    <a href="index.html" ><i
+                            class="fas fa-home"></i> <span>หน้าหลัก</span></a>
+                    <a href="Create_activity.html"><i class="fas fa-edit"></i>
                         <span>สร้างกิจกรรม</span></a>
-
-                    <a href="edit_delete_activity.html"><i
-                            class="fas fa-list-alt"></i> <span>รายการกิจกรรม</span></a>
-                    <a href="check_activity.html"><i
+                    <a href="Activity_list.html"><i
+                            class="fas fa-list-alt" ></i> <span>รายการกิจกรรม</span></a>
+                    <a href="Overview_activity.html"><i
                             class="fas fa-clipboard-check"></i>
                         <span>ภาพรวมกิจกรรม</span></a>
-                    <a href="Department_information.html" class="active"><i
+                    <a href="Professor_Assistant.html" class="active"><i
                             class="fas fa-building"></i>
                         <span>ผู้ช่วยอาจารย์</span></a>
                     <a href="Term_results_summary.html"><i
@@ -165,7 +162,7 @@
             </div>
 
             <div class="content">
-                <h2 class="page-title">ข้อมูลสาขา</h2>
+                <h2 class="page-title">ผู้ช่วยอาจารย์</h2>
 
                <div class="filter-controls">
                     <div class="filter-group">

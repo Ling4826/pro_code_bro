@@ -10,9 +10,6 @@ const activityId = params.get('activityId');
 const $ = sel => document.querySelector(sel);
 let allMajors = []; // เก็บข้อมูลสาขาที่โหลดมาทั้งหมด
 let allClassesData = []; // เก็บข้อมูล Class ทั้งหมด
-let globalIsoDate;
-let globalSemester;
-let globalAcademicYear;
 
 function setValue(id, value) {
     const el = document.getElementById(id);
@@ -22,16 +19,16 @@ function setValue(id, value) {
 
 function formatTimeISO(d) {
     if (!d) return '';
-
+    
     // 1. สร้าง Date object จาก timestamp ที่ได้มา
     // (JavaScript จะเข้าใจอัตโนมัติว่านี่คือเวลา UTC และเก็บไว้)
-    const dateObj = new Date(d);
-
+    const dateObj = new Date(d); 
+    
     // 2. ดึง "ชั่วโมง" และ "นาที" ตามเวลาท้องถิ่น (Local Time) ของเครื่องผู้ใช้
     // (คำสั่ง .getHours() จะแปลงจาก UTC เป็น Local ให้อัตโนมัติ)
     const hours = String(dateObj.getHours()).padStart(2, '0');
     const minutes = String(dateObj.getMinutes()).padStart(2, '0');
-
+    
     // 3. คืนค่าเป็น "HH:mm"
     return `${hours}:${minutes}`;
 }
@@ -41,7 +38,7 @@ function parseDisplayDateToISO(display) {
     const parts = display.split('/');
     if (parts.length !== 3) return null;
     const [dd, mm, yyyy] = parts.map(p => p.trim());
-    return `${yyyy}-${mm.padStart(2, '0')}-${dd.padStart(2, '0')}`;
+    return `${yyyy}-${mm.padStart(2,'0')}-${dd.padStart(2,'0')}`;
 }
 
 /* ====== LOADERS / RENDER (Logic ใหม่ที่ผสานแล้ว) ====== */
@@ -52,7 +49,7 @@ async function fetchAllMajorsAndClasses() {
         .select('id, name, level');
     if (majorError) { console.error('Error fetching majors:', majorError.message); return; }
     allMajors = majors;
-
+    
     const { data: classes, error: classError } = await supabaseCilent
         .from('class')
         .select('id, class_name, major_id, year, class_number');
@@ -114,9 +111,9 @@ async function fetchStudentClass(currentClassId = null) {
     classSelect.innerHTML = '<option value="">เลือกห้อง</option>';
 
     if (!majorId || !year) return;
-
+    
     // กรองจากข้อมูล Classes ที่ดึงมาทั้งหมด
-    const filteredClasses = allClassesData.filter(c =>
+    const filteredClasses = allClassesData.filter(c => 
         c.major_id.toString() === majorId.toString() && c.year.toString() === year.toString()
     );
 
@@ -167,7 +164,7 @@ async function loadAttendanceTable(activityIdLocal) {
             .order('student_id', { ascending: true });
 
         if (error) throw error;
-        const statusMap = { 'Attended': 'present', 'Absent': 'absent', 'Excused': 'late' };
+        const statusMap = { 'Attended':'present', 'Absent':'absent', 'Excused':'late' };
 
         data.forEach((record) => {
             const indexId = record.id;
@@ -183,11 +180,11 @@ async function loadAttendanceTable(activityIdLocal) {
                 <td style="text-align:left; padding-left:8px">${studentName}</td>
                 <td>${studentId}</td>
                 <td>
-                    <input type="radio" name="${radioName}" id="present_${indexId}" value="present" ${status === 'present' ? 'checked' : ''}>
+                    <input type="radio" name="${radioName}" id="present_${indexId}" value="present" ${status==='present' ? 'checked':''}>
                     <label for="present_${indexId}" class="present-btn"></label>
                 </td>
                 <td>
-                    <input type="radio" name="${radioName}" id="absent_${indexId}" value="absent" ${status === 'absent' ? 'checked' : ''}>
+                    <input type="radio" name="${radioName}" id="absent_${indexId}" value="absent" ${status==='absent' ? 'checked':''}>
                     <label for="absent_${indexId}" class="absent-btn"></label>
                 </td>
                 `;
@@ -254,24 +251,23 @@ async function loadActivity() {
 
         // 4. Set ค่าใน Form (ยกเว้น Dropdown)
         setValue('activityName', activity.name || '');
-
+        
         setValue('recurringDays', activity.is_recurring ? 1 : 0);
         setValue('semester', initialSemester || '');
 
         // 5. ตั้งค่า Flatpickr
         if (window.flatpickr) {
-
+            
             // 5.1 (โค้ดเดิม) Date Picker
             const defaultDate = initialDate ? new Date(initialDate) : null;
             window._activityDatePicker = flatpickr("#activityDate", {
                 dateFormat: "d/m/Y",
                 locale: "th",
-                defaultDate: defaultDate,
-                disabled: true // ⬅️ เพิ่มบรรทัดนี้
+                defaultDate: defaultDate
             });
 
             // 💡💡💡 [ 3. เพิ่มส่วนนี้ ] 💡💡💡
-
+            
             // 5.2. ดึงค่าเวลา (HH:mm) จาก Database
             const defaultStartTime = activity.start_time ? formatTimeISO(activity.start_time) : null;
             const defaultEndTime = activity.end_time ? formatTimeISO(activity.end_time) : null;
@@ -286,8 +282,7 @@ async function loadActivity() {
                 altFormat: "H:i น.",
                 minuteIncrement: 1,
                 locale: "th",
-                defaultDate: defaultStartTime,
-                disabled: true // ⬅️ เพิ่มบรรทัดนี้
+                defaultDate: defaultStartTime // ⬅️ ตั้งค่าเวลาที่โหลดมา
             });
 
             // 5.4. ตั้งค่า Time Picker สำหรับ endTime
@@ -300,12 +295,11 @@ async function loadActivity() {
                 altFormat: "H:i น.",
                 minuteIncrement: 1,
                 locale: "th",
-                defaultDate: defaultEndTime,
-                disabled: true // ⬅️ เพิ่มบรรทัดนี้
+                defaultDate: defaultEndTime // ⬅️ ตั้งค่าเวลาที่โหลดมา
             });
             // 💡💡💡 [ จบส่วนที่เพิ่ม ] 💡💡💡
         }
-
+        
         // 6. 💡 โหลดและตั้งค่า Dropdown ตามลำดับ (Logic ใหม่)
         await fetchAllMajorsAndClasses(); // โหลดข้อมูลทั้งหมดก่อน
 
@@ -316,11 +310,7 @@ async function loadActivity() {
 
         // 7. โหลดตารางเช็คชื่อ
         await loadAttendanceTable(activityId);
-        globalSemester = initialSemester;
-        const tempDate = new Date(initialDate);
-        globalIsoDate = tempDate.toISOString().split('T')[0]; // YYYY-MM-DD
-        globalAcademicYear = tempDate.getFullYear() + 543;
-        setValue('activityName', activity.name || '');
+
     } catch (err) {
         console.error('loadActivity error', err);
         alert("เกิดข้อผิดพลาดในการโหลดข้อมูล: " + err.message);
@@ -333,65 +323,100 @@ async function loadActivity() {
 document.addEventListener('DOMContentLoaded', async () => {
     const form = document.getElementById('createActivityForm');
     if (form) {
-        form.addEventListener('submit', async (e) => {
-            e.preventDefault();
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const activityName = document.getElementById('activityName').value.trim();
+        const activityDateDisplay = document.getElementById('activityDate').value.trim();
+        const isoDate = parseDisplayDateToISO(activityDateDisplay);
+        if (!isoDate) { alert('วันที่ไม่ถูกต้อง'); return; }
 
+        const startTime = document.getElementById('startTime').value;
+        const endTime = document.getElementById('endTime').value;
+        const start_time_iso = `${isoDate}T${startTime}:00`;
+        const end_time_iso = `${isoDate}T${endTime}:00`;
 
+        // 💡 อ่านค่าจาก Dropdown ใหม่
+        const classId = document.getElementById('studentClass').value || null;
+        const recurringDays = parseInt(document.getElementById('recurringDays').value || '0', 10);
+        const semester = parseInt(document.getElementById('semester').value || '0', 10);
+        const academicYearText = document.getElementById('studentYear').value;
 
-            try {
-               
+        if (!semester || !academicYearText) {
+            alert('กรุณาเลือกเทอมและปีการศึกษา');
+            return;
+        }
+        
+        // (สมมติว่า ปีการศึกษา = ปี ค.ศ. + 543)
+        const academicYear = new Date(isoDate).getFullYear() + 543;
 
-                // 2. อัปเดต activity_check
-                const rows = Array.from(document.querySelectorAll('.attendance-table tbody tr'));
-                const statusMap = { present: 'Attended', absent: 'Absent', late: 'Excused' }; // เพิ่ม 'late'
+        const activityData = {
+            name: activityName,
+            start_time: start_time_iso,
+            end_time: end_time_iso,
+            is_recurring: (recurringDays > 0) ? true : false,
+            // 💡 อัปเดต class_id
+            class_id: classId ? parseInt(classId, 10) : null 
+        };
 
-                for (const row of rows) {
-                    const recordId = row.dataset.recordId;
-                    if (!recordId) continue;
+        try {
+            // 1. อัปเดต Activity
+            const { error: updateError } = await supabaseCilent
+                .from('activity')
+                .update(activityData)
+                .eq('id', activityId);
+            if (updateError) throw updateError;
 
-                    const checked = row.querySelector('input[type="radio"]:checked');
-                    const statusValue = checked ? checked.value : null;
-                    const supaStatus = statusMap[statusValue] || null; // ถ้าไม่เลือก (null) ให้ส่ง null
+            // 2. อัปเดต activity_check
+            const rows = Array.from(document.querySelectorAll('.attendance-table tbody tr'));
+            const statusMap = { present:'Attended', absent:'Absent', late:'Excused' }; // เพิ่ม 'late'
 
-                    const { error } = await supabaseCilent
-                        .from('activity_check')
-                        .update({
-                            status: supaStatus,
-                            date: globalIsoDate,
-                            semester: globalSemester,
-                            academic_year: globalAcademicYear
-                        })
-                        .eq('id', recordId);
+            for (const row of rows) {
+                const recordId = row.dataset.recordId;
+                if (!recordId) continue;
+                
+                const checked = row.querySelector('input[type="radio"]:checked');
+                const statusValue = checked ? checked.value : null;
+                const supaStatus = statusMap[statusValue] || null; // ถ้าไม่เลือก (null) ให้ส่ง null
 
-                    if (error) throw error;
-                }
+                const { error } = await supabaseCilent
+                    .from('activity_check')
+                    .update({
+                        status: supaStatus,
+                        date: isoDate,
+                        semester: semester,
+                        academic_year: academicYear
+                    })
+                    .eq('id', recordId);
 
-                alert('บันทึกการเข้าเรียนเรียบร้อยแล้ว!');
-                window.location.href = 'edit_delete_activity.html';
-
-            } catch (err) {
-                console.error('submit error', err);
-                alert('เกิดข้อผิดพลาด: ' + (err.message || JSON.stringify(err)));
+                if (error) throw error;
             }
-        })
-        // 💡 เชื่อม Event Listeners (Logic ใหม่)
-        const levelSelect = document.getElementById('level');
-        const departmentSelect = document.getElementById('department');
-        const studentYearSelect = document.getElementById('studentYear');
 
-        // Event 1: Level Change (Level -> Department + Year)
-        levelSelect?.addEventListener('change', async (e) => {
-            const selectedLevel = e.target.value;
-            updateDepartmentOptions(selectedLevel, null);
-            updateYearOptions(selectedLevel, null);
-            await fetchStudentClass(); // รีโหลด Class
-        });
+            alert('แก้ไขกิจกรรมและสถานะนักศึกษาเรียบร้อยแล้ว!');
+            window.location.href = 'Activity_list.html';
 
-        // Event 2: Department/Year Change (Department/Year -> Class)
-        departmentSelect?.addEventListener('change', () => fetchStudentClass());
-        studentYearSelect?.addEventListener('change', () => fetchStudentClass());
+        } catch (err) {
+            console.error('submit error', err);
+            alert('เกิดข้อผิดพลาด: ' + (err.message || JSON.stringify(err)));
+        }
+    })
+    // 💡 เชื่อม Event Listeners (Logic ใหม่)
+    const levelSelect = document.getElementById('level');
+    const departmentSelect = document.getElementById('department');
+    const studentYearSelect = document.getElementById('studentYear');
+    
+    // Event 1: Level Change (Level -> Department + Year)
+    levelSelect?.addEventListener('change', async (e) => {
+        const selectedLevel = e.target.value;
+        updateDepartmentOptions(selectedLevel, null);
+        updateYearOptions(selectedLevel, null);
+        await fetchStudentClass(); // รีโหลด Class
+    });
 
-        // initial loading
-        await loadActivity();
-    }
-});
+    // Event 2: Department/Year Change (Department/Year -> Class)
+    departmentSelect?.addEventListener('change', () => fetchStudentClass());
+    studentYearSelect?.addEventListener('change', () => fetchStudentClass());
+
+    // initial loading
+    await loadActivity();
+}});

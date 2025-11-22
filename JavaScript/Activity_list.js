@@ -343,7 +343,7 @@ function attachCardEventListeners() {
 
             // ถ้าคลิกที่การ์ด (ไม่ใช่ไอคอน) ให้ไปหน้า Check_student
             const activityId = card.dataset.id;
-            window.location.href = `Check_student.html?activityId=${activityId}`;
+            window.location.href = `Check_activities.html?activityId=${activityId}`;
         });
     });
 
@@ -364,7 +364,7 @@ function attachCardEventListeners() {
             event.stopPropagation(); // ⬅️ หยุด event ไม่ให้ทะลุไปที่การ์ด
             const card = event.target.closest('.activity-card');
             const activityId = card.dataset.id;
-            window.location.href = `Edit.html?activityId=${activityId}`;
+            window.location.href = `Edit_activity.html?activityId=${activityId}`;
         });
     });
 }
