@@ -300,6 +300,7 @@ function handleLevelChange(selectedLevel, majors) {
 // *เริ่มต้นเมื่อ DOM โหลดเสร็จ*
 // -------------------------------------------------------------
 document.addEventListener('DOMContentLoaded', async () => {
+    alert('Login successful! Welcome, ' + sessionStorage.getItem('user_role'));
     // 1. โหลดข้อมูลสาขาทั้งหมด
     const allMajors = await fetchAllMajors();
     
