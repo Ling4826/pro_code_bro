@@ -326,3 +326,150 @@ body {
 }
 /* *** END: CSS สำหรับหน้าตาราง (สรุปผลและข้อมูลสาขา) ***
 */
+
+#sidebarToggle {
+    cursor: pointer;
+    font-size: 24px;
+    margin-right: 15px;
+    transition: color 0.2s;
+}
+
+#sidebarToggle:hover {
+    color: #f0f0f0; /* สีตอนเอาเมาส์ชี้ */
+}
+
+/* เพิ่ม Transition ให้ Sidebar ยืดหดนุ่มนวล */
+.sidebar {
+    transition: width 0.3s ease;
+    overflow: hidden; /* ซ่อนส่วนที่เกิน */
+    white-space: nowrap; /* ห้ามขึ้นบรรทัดใหม่ */
+}
+
+/* --- สไตล์ตอนหุบ (Collapsed State) --- */
+.sidebar.collapsed {
+    width: 60px; /* หดเหลือแค่ความกว้างไอคอน */
+}
+
+.sidebar.collapsed a {
+    text-align: center; /* จัดไอคอนให้อยู่ตรงกลาง */
+    padding-left: 0;
+    padding-right: 0;
+}
+
+.sidebar.collapsed a span {
+    display: none; /* ซ่อนข้อความใน <span> */
+}
+
+.sidebar.collapsed a i {
+    margin-right: 0; /* เอาช่องว่างขวาของไอคอนออก */
+    font-size: 20px; /* ปรับขนาดไอคอนให้พอดี */
+}
+
+/* ปรับแต่งส่วน Logo ตอนหุบ (ถ้าต้องการ) */
+.sidebar.collapsed ~ .content {
+    /* Content จะขยายเต็มพื้นที่เองเพราะใช้ Flexbox อยู่แล้ว */
+}
+
+/* =========================================
+   ส่วนรองรับมือถือและแท็บเล็ต (Responsive)
+   ========================================= */
+@media screen and (max-width: 1024px) {
+    /* --- 1. ปรับ Sidebar ให้เป็นแบบลอยทับ (Overlay) --- */
+    .sidebar {
+        position: fixed;
+        height: 100vh;
+        z-index: 9999;
+        box-shadow: 4px 0 15px rgba(0,0,0,0.3);
+    }
+    
+    /* บนมือถือ: ถ้ามี class collapsed คือ "ซ่อนมิด" (width: 0) */
+    .sidebar.collapsed {
+        width: 0;
+        padding: 0;
+        overflow: hidden;
+    }
+
+    /* ปรับ Content ให้เต็มจอเสมอ ไม่ว่าจะหุบหรือกางเมนู */
+    .content {
+        width: 100%; 
+        padding: 15px; /* ลดขอบให้น้อยลง */
+        overflow-x: hidden; /* ป้องกันจอเลื่อนซ้ายขวา */
+    }
+
+    /* --- 2. ปรับฟอร์ม (Form) ให้เรียงแนวตั้ง --- */
+    .form-row {
+        flex-direction: column; /* เรียงลงมาแนวตั้ง */
+        gap: 15px;
+    }
+
+    .form-group, 
+    .input-icon-group {
+        width: 100% !important; /* บังคับให้กว้างเต็มจอ */
+        min-width: 0;
+    }
+    
+    .form-group input, 
+    .form-group select, 
+    .input-icon-group input {
+        width: 100%; /* ช่องกรอกข้อมูลเต็มจอ */
+    }
+
+    /* จัดกลุ่มเวลา (ถ้ามี) ให้ยังอยู่คู่กัน หรือแยกก็ได้ */
+    .time-group {
+        flex-direction: column;
+    }
+
+    /* --- 3. ปรับตาราง (Table) ให้เลื่อนซ้ายขวาได้ --- */
+    /* ใส่ Scrollbar แนวนอนให้ตารางถ้ายาวเกินจอ */
+    .data-table, 
+    .attendance-table,
+    .activity-table {
+        display: block;
+        width: 100%;
+        overflow-x: auto; /* เลื่อนแนวนอนได้ */
+        white-space: nowrap; /* ห้ามตัดคำ เพื่อให้ตารางไม่บีบ */
+    }
+
+    /* --- 4. ปรับตัวกรอง (Filters) ด้านบน --- */
+    .filter-controls, .controls-row {
+        flex-direction: column;
+        align-items: stretch; /* ยืดเต็มความกว้าง */
+        gap: 10px;
+    }
+
+    .filter-controls select, 
+    .filter-controls input, 
+    .search-box,
+    .date-controls {
+        width: 100%;
+        margin: 0;
+        justify-content: space-between;
+    }
+
+    /* --- 5. ปรับหน้าหลัก (Grid เมนู) --- */
+    .function-grid {
+        grid-template-columns: 1fr; /* เหลือ 1 คอลัมน์ */
+        gap: 15px;
+    }
+
+    /* --- 6. อื่นๆ --- */
+    .page-title {
+        font-size: 22px; /* ลดขนาดหัวข้อ */
+    }
+
+    .modal-dialog {
+        width: 90%; /* Popup เต็มจอมากขึ้น */
+    }
+
+    /* ปรับปุ่มด้านบนขวาให้ไม่เบียด */
+    .content > div:first-child {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+    
+    #exportExcelBtn {
+        width: 100% !important; /* ปุ่ม Excel เต็มจอ */
+        justify-content: center;
+    }
+}
