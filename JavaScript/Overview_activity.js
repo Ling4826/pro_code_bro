@@ -157,8 +157,10 @@ function LoadDate(activities) {
         months.add(d.getMonth() + 1);
         years.add(d.getFullYear() + 543);
     });
-
-
+    // Create All option
+    daySelect.innerHTML = `<option value="">All</option>`;
+    monthSelect.innerHTML = `<option value="">All</option>`;
+    yearSelect.innerHTML = `<option value="">All</option>`;
     // สร้าง option
     days.forEach(d => daySelect.innerHTML += `<option value="${d}">${d}</option>`);
     months.forEach(m => monthSelect.innerHTML += `<option value="${m}">${m}</option>`);
@@ -171,9 +173,9 @@ function setupFilters(activities) {
     const yearSelect = document.getElementById('yearSelect');
 
     // ค่าเริ่มต้นเป็นค่าว่างทั้งหมด
-    daySelect.value = "15";
-    monthSelect.value = "6";
-    yearSelect.value = "2568";
+    daySelect.value = "";
+    monthSelect.value = "";
+    yearSelect.value = "";
 
     function applyFilter() {
         const dVal = daySelect.value;
