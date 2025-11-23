@@ -15,6 +15,8 @@
     }
     
   </style>
+  <script
+            src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   </head>
   <body>
 
@@ -55,26 +57,30 @@
         <h2 class="page-title">สรุปผลเทอม</h2>
 
         <div class="filter-controls">
-          <div class="search-box">
-            <input type="text" placeholder="ชื่อนักเรียน">
-            <i class="fa fa-search"></i>
+            <div class="search-box">
+              <input type="text" placeholder="ชื่อนักเรียน">
+              <i class="fa fa-search"></i>
+            </div>
+            <div class="filter-group">
+                          <label for="department">สาขา</label>
+                          <select id="department">
+                              <option>เลือกสาขา</option>
+                          </select>
+            </div>
+          <div class="filter-group">
+                          <label for="level">ระดับ</label>
+                          <select id="level">
+                              <option>เลือกระดับ</option>
+                              <option>ปวช</option>
+                              <option>ปวส</option>
+                          </select>
           </div>
-          <select class="filter-select">
-            <option>เลือกสาขา</option>
-            <option>เทคโนโลยีคอมพิวเตอร์</option>
-            <option>ไฟฟ้ากำลัง</option>
-            <option>เครื่องกล</option>
-          </select>
-          <select class="filter-select">
-            <option>เลือกระดับ</option>
-            <option>ปวช.</option>
-            <option>ปวส.</option>
-          </select>
         </div>
 
         <table class="data-table summary-table">
           <thead>
             <tr>
+              <th>รหัสนักเรียน</th>
               <th>ชื่อนักเรียน</th>
               <th>สาขา</th>
               <th>ครูที่ปรึกษา</th>
@@ -86,18 +92,7 @@
               <th>ผลฝึกงาน</th>
             </tr>
           </thead>
-          <tbody>
-            <tr>
-              <td>ศักดิ์สิทธิ์ ทดสอบ</td>
-              <td>ช่างยนต์</td>
-              <td>อ.ชวนพิศ</td>
-              <td>20</td>
-              <td>18</td>
-              <td>90%</td>
-              <td>75%</td>
-              <td class="pass">✔ ผ่าน</td>
-              <td class="fail">✖ ไม่ผ่าน</td>
-            </tr>
+          <tbody id = "score-body">
           </tbody>
         </table>
       </div>
@@ -113,7 +108,7 @@
 
         if (isMobile) {
             // บนมือถือ: เริ่มต้นต้อง "หุบ" (collapsed) เสมอ เพื่อไม่ให้บังเนื้อหา
-            sidebar.classList.add('collapsed'); 
+            sidebar.classList.add('collapsed');
         } else {
             // บนคอม: เอาตามที่เคยจำไว้ (ถ้าจำว่าหุบ ก็หุบ)
             if (savedState === 'collapsed') {
@@ -142,6 +137,6 @@
     });
 
     </script>
-
+<script src="JavaSCript/Term_result_summary.js"></script>
   </body>
 </html>
