@@ -24,5 +24,7 @@ loginForm.addEventListener('submit', async (event) => {
     sessionStorage.setItem('user_id', user.id);
     sessionStorage.setItem('user_role', user.role);
     alert('Login successful! Welcome, ' + sessionStorage.getItem('user_role'));
-    window.location.href = 'index.html';
+    
+    // --- แก้ไขตรงนี้ครับ ให้ไปหน้า Home.html แทน ---
+    window.location.href = '/Admin/Home.html'; 
 });
