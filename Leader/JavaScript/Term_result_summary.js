@@ -3,15 +3,19 @@ const SUPABASE_URL = 'https://pdqzkejlefozxquptoco.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBkcXprZWpsZWZvenhxdXB0b2NvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIzNDIyODAsImV4cCI6MjA3NzkxODI4MH0.EojnxNcGPj7eGlf7FAJOgMuEXIW54I2NQwB_L2Wj9DU';
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-let termScoreRows = []; // ข้อมูลดิบทั้งหมด
+let termScoreRows = []; 
 
 async function fetchTermScore() {
-    // แสดงสถานะ Loading
     document.getElementById("score-body").innerHTML = `
         <tr><td colspan="12" style="padding: 20px; color: #666;">กำลังดึงข้อมูล...</td></tr>
     `;
 
-    const { data, error } = await supabaseClient
+    // 1. ดึงข้อมูล User จาก Session
+    const userRole = sessionStorage.getItem('user_role')?.toLowerCase(); // admin, teacher, student
+    const userRefId = sessionStorage.getItem('ref_id'); // รหัสนักศึกษา (ถ้าเป็นนักเรียน)
+
+    // 2. สร้าง Query พื้นฐาน
+    let query = supabaseClient
         .from('term_score')
         .select(`
             id,
@@ -44,6 +48,13 @@ async function fetchTermScore() {
             )
         `);
 
+    // 3. 🛡️ เพิ่มเงื่อนไขกรอง: ถ้าเป็น "student" ให้เห็นแค่ของตัวเอง
+    if (userRole === 'student' && userRefId) {
+        query = query.eq('student_id', userRefId);
+    }
+
+    const { data, error } = await query;
+
     if (error) {
         console.error("ERROR >", error);
         document.getElementById("score-body").innerHTML = `
@@ -52,7 +63,7 @@ async function fetchTermScore() {
         return null;
     }
 
-    // แปลงข้อมูลให้อยู่ในรูปแบบ Flat Data เพื่อให้ง่ายต่อการกรอง
+    // แปลงข้อมูล (Mapping)
     termScoreRows = data.map(row => {
         const student = row.student;
         const classInfo = student?.class;
@@ -65,63 +76,58 @@ async function fetchTermScore() {
             id: row.id,
             student_id: student?.id ?? "-",
             studentName: student?.name ?? "-",
-            
-            // ข้อมูลสำหรับ Filter
             majorName: major?.name ?? "-",
-            level: major?.level ?? "-", // ใช้ Level จาก Database โดยตรง
+            level: major?.level ?? "-", 
             year: classInfo?.year ?? "-",
             classNumber: classInfo?.class_number ?? "-",
-            
             advisors: advisorList.join(", ") || "-",
             attendedActivity: activityCount,
-            
             exActivity: row.flag_ceremony_percentage,
             exInternship: row.department_activity_percentage,
-            
             isActivityPassed: row.is_passed,
             isInternshipPassed: row.department_activity_percentage >= 50
         };
     });
 
-    // เริ่มต้นระบบ Filter (Cascading)
+    // เริ่มต้นระบบ Filter
     initFilters();
     
-    // แสดงตารางครั้งแรก
+    // แสดงตาราง
     renderFilteredTable();
+    
+    // ถ้าเป็นนักเรียน ให้ซ่อนตัวกรองที่ไม่จำเป็น (Optional)
+    if (userRole === 'student') {
+        const filterBox = document.querySelector('.filter-controls');
+        if(filterBox) filterBox.style.display = 'none'; // ซ่อนกล่องค้นหาไปเลยเพราะเห็นแค่คนเดียวอยู่แล้ว
+    }
 }
 
+// ... (ส่วน Logic initFilters, getFilteredRows, renderFilteredTable เหมือนเดิม) ...
+// เพื่อความกระชับ คุณสามารถใช้ฟังก์ชันเดิมต่อท้ายตรงนี้ได้เลยครับ 
+// หรือถ้าต้องการโค้ดเต็มๆ แจ้งได้ครับ
 // ============================================
 // === SMART FILTER LOGIC (Cascading) ===
 // ============================================
 
 function initFilters() {
-    // 1. ดึง Level ทั้งหมดที่มีในระบบมาใส่ Dropdown แรกสุด
-    // (บางทีใน DB อาจเก็บเป็น "ปวช." หรือ "Vocational Certificate" ต้องเช็คดีๆ)
-    // ในที่นี้สมมติว่าใน DB major.level เก็บคำว่า "ปวช." หรือ "ปวส."
-    
-    // ถ้าอยาก Hardcode เพื่อความสวยงามก็ได้ แต่ถ้าเอาจาก DB ก็ใช้แบบนี้:
     const uniqueLevels = [...new Set(termScoreRows.map(r => r.level))].filter(l => l !== "-").sort();
     fillSelect("level", uniqueLevels, "ทุกระดับ");
 
-    // เมื่อ Level เปลี่ยน -> ให้ไปอัปเดต Major
     document.getElementById("level").addEventListener("change", () => {
         updateMajorDropdown(); 
-        updateYearAndRoomDropdown(); // รีเซ็ตลูกๆ
+        updateYearAndRoomDropdown(); 
         renderFilteredTable();
     });
 
-    // เมื่อ Major เปลี่ยน -> ให้ไปอัปเดต Year และ Room
     document.getElementById("department").addEventListener("change", () => {
         updateYearAndRoomDropdown();
         renderFilteredTable();
     });
 
-    // เมื่อ Year/Room เปลี่ยน -> แค่ Render ตารางใหม่
     document.getElementById("studentYear").addEventListener("change", renderFilteredTable);
     document.getElementById("classNumber").addEventListener("change", renderFilteredTable);
     document.getElementById("searchInput").addEventListener("input", renderFilteredTable);
 
-    // Initial populate
     updateMajorDropdown();
     updateYearAndRoomDropdown();
 }
@@ -129,48 +135,32 @@ function initFilters() {
 function updateMajorDropdown() {
     const levelSelect = document.getElementById("level");
     const selectedLevel = levelSelect.value;
-    
-    // กรองเอาเฉพาะข้อมูลที่ตรงกับ Level ที่เลือก
     let filteredRows = termScoreRows;
     if (selectedLevel) {
         filteredRows = termScoreRows.filter(r => r.level === selectedLevel);
     }
-
-    // ดึงรายชื่อสาขาจากข้อมูลที่กรองแล้ว
     const uniqueMajors = [...new Set(filteredRows.map(r => r.majorName))].sort();
-    
-    // เติมเข้า Dropdown สาขา
     fillSelect("department", uniqueMajors, "ทุกสาขาวิชา");
 }
 
 function updateYearAndRoomDropdown() {
     const levelSelect = document.getElementById("level");
     const majorSelect = document.getElementById("department");
-    
     const selectedLevel = levelSelect.value;
     const selectedMajor = majorSelect.value;
-
-    // กรองข้อมูลตาม Level และ Major ที่เลือกอยู่
     let filteredRows = termScoreRows;
-    if (selectedLevel) {
-        filteredRows = filteredRows.filter(r => r.level === selectedLevel);
-    }
-    if (selectedMajor) {
-        filteredRows = filteredRows.filter(r => r.majorName === selectedMajor);
-    }
+    if (selectedLevel) filteredRows = filteredRows.filter(r => r.level === selectedLevel);
+    if (selectedMajor) filteredRows = filteredRows.filter(r => r.majorName === selectedMajor);
 
-    // ดึงชั้นปี และ ห้อง ที่เป็นไปได้จากข้อมูลชุดนั้น
     const uniqueYears = [...new Set(filteredRows.map(r => r.year))].sort((a,b) => a-b);
     const uniqueRooms = [...new Set(filteredRows.map(r => r.classNumber))].sort((a,b) => a-b);
 
-    // เติม Dropdown (เก็บค่าเดิมไว้ถ้ามี แต่ถ้าค่าเดิมไม่อยู่ในลิสต์ใหม่ มันจะเด้งออกเอง)
     const currentYear = document.getElementById("studentYear").value;
     const currentRoom = document.getElementById("classNumber").value;
 
     fillSelect("studentYear", uniqueYears, "ทุกชั้นปี", "ปี ");
     fillSelect("classNumber", uniqueRooms, "ทุกห้อง", "ห้อง ");
 
-    // พยายามคืนค่าเดิมกลับไปถ้ามันยัง valid อยู่
     if (uniqueYears.includes(Number(currentYear)) || uniqueYears.includes(currentYear)) {
         document.getElementById("studentYear").value = currentYear;
     }
@@ -179,14 +169,10 @@ function updateYearAndRoomDropdown() {
     }
 }
 
-// Helper Function: เติม Option เข้า Select
 function fillSelect(elementId, items, placeholder, prefix = "") {
     const select = document.getElementById(elementId);
     if (!select) return;
-    
-    // ล้างของเก่า
     select.innerHTML = `<option value="">${placeholder}</option>`;
-    
     items.forEach(item => {
         if (item !== "-" && item !== null && item !== undefined) { 
             const option = document.createElement("option");
@@ -197,13 +183,8 @@ function fillSelect(elementId, items, placeholder, prefix = "") {
     });
 }
 
-// ============================================
-// === FILTER TABLE LOGIC ===
-// ============================================
-
 function getFilteredRows() {
     let rows = [...termScoreRows];
-
     const level = document.getElementById("level").value;
     const department = document.getElementById("department").value;
     const year = document.getElementById("studentYear").value;
@@ -231,7 +212,6 @@ function renderFilteredTable() {
     tbody.innerHTML = filtered.map(row => {
         const actBadgeClass = row.isActivityPassed ? 'status-pass' : 'status-fail';
         const actText = row.isActivityPassed ? 'ผ่าน' : 'ไม่ผ่าน';
-
         const internBadgeClass = row.isInternshipPassed ? 'status-pass' : 'status-fail';
         const internText = row.isInternshipPassed ? 'ผ่าน' : 'ไม่ผ่าน';
 
@@ -253,7 +233,6 @@ function renderFilteredTable() {
     }).join("");
 }
 
-// เริ่มทำงานเมื่อโหลดหน้าเสร็จ
 document.addEventListener("DOMContentLoaded", async () => {
     await fetchTermScore();
 });

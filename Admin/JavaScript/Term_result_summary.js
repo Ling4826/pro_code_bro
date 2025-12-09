@@ -57,7 +57,7 @@ async function fetchTermScore() {
         const student = row.student;
         const classInfo = student?.class;
         const major = classInfo?.major;
-        
+
         const advisorList = major?.teacher_major?.map(tm => tm.teacher.name) || [];
         const activityCount = row.activity_check?.filter(a => a.status === "Attended").length || 0;
 
@@ -65,27 +65,22 @@ async function fetchTermScore() {
             id: row.id,
             student_id: student?.id ?? "-",
             studentName: student?.name ?? "-",
-            
+
             // ข้อมูลสำหรับ Filter
             majorName: major?.name ?? "-",
             level: major?.level ?? "-", // ใช้ Level จาก Database โดยตรง
             year: classInfo?.year ?? "-",
             classNumber: classInfo?.class_number ?? "-",
-            
-            advisors: advisorList.join(", ") || "-",
-            attendedActivity: activityCount,
-            
-            exActivity: row.flag_ceremony_percentage,
-            exInternship: row.department_activity_percentage,
-            
-            isActivityPassed: row.is_passed,
-            isInternshipPassed: row.department_activity_percentage >= 50
+
+            percentFlag: row.flag_ceremony_percentage,       // คะแนนเข้าแถว
+            percentActivity: row.department_activity_percentage, // คะแนนกิจกรรม
+            isPassed: row.is_passed // ผลการประเมินรวม
         };
     });
 
     // เริ่มต้นระบบ Filter (Cascading)
     initFilters();
-    
+
     // แสดงตารางครั้งแรก
     renderFilteredTable();
 }
@@ -98,14 +93,14 @@ function initFilters() {
     // 1. ดึง Level ทั้งหมดที่มีในระบบมาใส่ Dropdown แรกสุด
     // (บางทีใน DB อาจเก็บเป็น "ปวช." หรือ "Vocational Certificate" ต้องเช็คดีๆ)
     // ในที่นี้สมมติว่าใน DB major.level เก็บคำว่า "ปวช." หรือ "ปวส."
-    
+
     // ถ้าอยาก Hardcode เพื่อความสวยงามก็ได้ แต่ถ้าเอาจาก DB ก็ใช้แบบนี้:
     const uniqueLevels = [...new Set(termScoreRows.map(r => r.level))].filter(l => l !== "-").sort();
     fillSelect("level", uniqueLevels, "ทุกระดับ");
 
     // เมื่อ Level เปลี่ยน -> ให้ไปอัปเดต Major
     document.getElementById("level").addEventListener("change", () => {
-        updateMajorDropdown(); 
+        updateMajorDropdown();
         updateYearAndRoomDropdown(); // รีเซ็ตลูกๆ
         renderFilteredTable();
     });
@@ -129,7 +124,7 @@ function initFilters() {
 function updateMajorDropdown() {
     const levelSelect = document.getElementById("level");
     const selectedLevel = levelSelect.value;
-    
+
     // กรองเอาเฉพาะข้อมูลที่ตรงกับ Level ที่เลือก
     let filteredRows = termScoreRows;
     if (selectedLevel) {
@@ -138,7 +133,7 @@ function updateMajorDropdown() {
 
     // ดึงรายชื่อสาขาจากข้อมูลที่กรองแล้ว
     const uniqueMajors = [...new Set(filteredRows.map(r => r.majorName))].sort();
-    
+
     // เติมเข้า Dropdown สาขา
     fillSelect("department", uniqueMajors, "ทุกสาขาวิชา");
 }
@@ -146,7 +141,7 @@ function updateMajorDropdown() {
 function updateYearAndRoomDropdown() {
     const levelSelect = document.getElementById("level");
     const majorSelect = document.getElementById("department");
-    
+
     const selectedLevel = levelSelect.value;
     const selectedMajor = majorSelect.value;
 
@@ -160,8 +155,8 @@ function updateYearAndRoomDropdown() {
     }
 
     // ดึงชั้นปี และ ห้อง ที่เป็นไปได้จากข้อมูลชุดนั้น
-    const uniqueYears = [...new Set(filteredRows.map(r => r.year))].sort((a,b) => a-b);
-    const uniqueRooms = [...new Set(filteredRows.map(r => r.classNumber))].sort((a,b) => a-b);
+    const uniqueYears = [...new Set(filteredRows.map(r => r.year))].sort((a, b) => a - b);
+    const uniqueRooms = [...new Set(filteredRows.map(r => r.classNumber))].sort((a, b) => a - b);
 
     // เติม Dropdown (เก็บค่าเดิมไว้ถ้ามี แต่ถ้าค่าเดิมไม่อยู่ในลิสต์ใหม่ มันจะเด้งออกเอง)
     const currentYear = document.getElementById("studentYear").value;
@@ -183,12 +178,12 @@ function updateYearAndRoomDropdown() {
 function fillSelect(elementId, items, placeholder, prefix = "") {
     const select = document.getElementById(elementId);
     if (!select) return;
-    
+
     // ล้างของเก่า
     select.innerHTML = `<option value="">${placeholder}</option>`;
-    
+
     items.forEach(item => {
-        if (item !== "-" && item !== null && item !== undefined) { 
+        if (item !== "-" && item !== null && item !== undefined) {
             const option = document.createElement("option");
             option.value = item;
             option.textContent = prefix + item;
@@ -224,16 +219,14 @@ function renderFilteredTable() {
     const tbody = document.getElementById("score-body");
     
     if (filtered.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="12" style="text-align:center; padding: 20px; color: #999;">ไม่พบข้อมูลตามเงื่อนไข</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding: 20px; color: #999;">ไม่พบข้อมูลตามเงื่อนไข</td></tr>`;
         return;
     }
 
     tbody.innerHTML = filtered.map(row => {
-        const actBadgeClass = row.isActivityPassed ? 'status-pass' : 'status-fail';
-        const actText = row.isActivityPassed ? 'ผ่าน' : 'ไม่ผ่าน';
-
-        const internBadgeClass = row.isInternshipPassed ? 'status-pass' : 'status-fail';
-        const internText = row.isInternshipPassed ? 'ผ่าน' : 'ไม่ผ่าน';
+        const passBadge = row.isPassed 
+            ? '<span class="status-badge status-pass">ผ่าน</span>' 
+            : '<span class="status-badge status-fail">ไม่ผ่าน</span>';
 
         return `
         <tr>
@@ -242,12 +235,10 @@ function renderFilteredTable() {
             <td>${row.majorName}</td>
             <td>${row.year}</td>
             <td>${row.classNumber}</td>
-            <td>${row.advisors}</td>
-            <td>${row.attendedActivity}</td>
-            <td>${row.exActivity}%</td>
-            <td>${row.exInternship}%</td>
-            <td><span class="status-badge ${actBadgeClass}">${actText}</span></td>
-            <td><span class="status-badge ${internBadgeClass}">${internText}</span></td>
+            
+            <td>${row.percentFlag}%</td>     
+            <td>${row.percentActivity}%</td> 
+            <td>${passBadge}</td>
         </tr>
         `;
     }).join("");
