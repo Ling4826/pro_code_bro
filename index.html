@@ -1,58 +1,198 @@
 <!DOCTYPE html>
 <html lang="th">
 <head>
-    
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-     <link rel="stylesheet" href="CSS/style.css">
-     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <title>Login</title>
+    <title>PBNTC Login</title>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap" rel="stylesheet">
+    
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
     <style>
+        /* --- 1. ตั้งค่าพื้นฐาน --- */
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            font-family: 'Sarabun', Tahoma, sans-serif;
+            overflow: hidden; 
+        }
+
+        /* --- 2. ส่วนจัดการพื้นหลัง --- */
+        body {
+            /* ต้องมีไฟล์ชื่อ BG.png (หรือ BG.jpg) อยู่ในโฟลเดอร์เดียวกัน */
+            background-image: url('BG.png'); 
+            
+            /* ตั้งค่าให้รูปเต็มจอเสมอ ไม่ซ้ำ และตรึงอยู่กับที่ */
+            background-repeat: no-repeat;
+            background-position: center center;
+            background-size: cover;
+            background-attachment: fixed;
+
+            /* ใช้ Flexbox เพื่อจัด layout แนวตั้ง */
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* --- 3. Header (แถบส้มด้านบน) --- */
+        .header {
+            background-color: #d9534f; 
+            color: white;
+            height: 60px;
+            padding: 0 20px;
+            display: flex;
+            align-items: center; 
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            position: relative;
+            z-index: 10;
+        }
+
+        .logo-area {
+            display: flex;
+            align-items: center; 
+            gap: 15px; 
+            font-size: 24px;
+            font-weight: bold;
+            line-height: 1; 
+        }
+
+        .logo {
+            height: 40px; 
+            width: auto;
+            display: block;
+        }
+
+        /* --- 4. Main Content --- */
+        .main-container {
+            flex: 1; 
+            display: flex;
+            justify-content: center;
+            align-items: center; 
+            padding: 20px;
+        }
+
+        /* --- 5. Login Card --- */
+        .login-container {
+            background-color: #5B5F6A; 
+            width: 100%;
+            max-width: 420px; 
+            padding: 40px 30px;
+            border-radius: 15px;
+            text-align: center;
+            color: white;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .login-logo {
+            width: 120px;
+            margin-bottom: 25px;
+        }
+
+        /* --- Input Fields --- */
+        .input-group {
+            margin-bottom: 15px;
+        }
+
+        input[type="text"],
+        input[type="password"] {
+            width: 100%;
+            padding: 12px 20px;
+            border-radius: 25px;
+            border: none;
+            outline: none;
+            font-size: 16px;
+            background-color: #E8EBF5; 
+            box-sizing: border-box; 
+        }
+
+        /* --- ปุ่มเข้าสู่ระบบ --- */
+        button {
+            background-color: white;
+            color: #333;
+            font-weight: bold;
+            font-size: 16px;
+            padding: 10px 30px;
+            border-radius: 25px;
+            border: none;
+            cursor: pointer;
+            margin-top: 10px;
+            transition: all 0.2s;
+        }
+
+        button:hover {
+            transform: scale(1.05);
+            background-color: #f0f0f0;
+        }
+
+        /* --- ข้อความช่วยเหลือ --- */
+        .help-text {
+            margin-top: 25px;
+            font-size: 12px;
+            color: #d1d1d1;
+            line-height: 1.6;
+        }
+
+        /* --- 6. Footer --- */
         footer {
             background-color: #212C34;
-            color: white;
+            color: #aaa;
+            padding: 15px 0;
             text-align: center;
-            padding: 10px 0;
-            position: fixed;
-            bottom: 0;
-            width: 100%;
+            font-size: 13px;
         }
-        footer a {
-            color: #ffcc00;
-            text-decoration: none;
-        }
-        footer img {
-            vertical-align: middle;
-            filter: brightness(0) invert(1);
-            width: 20px;
-            height: 20px;
-            margin-right: 1px;
+
+        footer p {
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 5px;
         }
     </style>
 </head>
 <body>
-     <div class="header">
-            <div class="logo-area">
-                <img src="pbntc-logo.webp" alt="PBNTC Logo" class="logo">
-                PBNTC
-            </div>
-        
+
+    <div class="header">
+        <div class="logo-area">
+            <img src="pbntc-logo.webp" alt="PBNTC Logo" class="logo">
+            <span>PBNTC</span>
         </div>
-        <div class="main-container">
+    </div>
+
+    <div class="main-container">
         <div class="login-container">
-            <img src="pbntc-logo.webp" alt="PBNTC Logo" class="login-logo">
+            <img src="pbntc-logo.webp" alt="Logo" class="login-logo">
+            
             <form id="login">
-                <br><label for="username">ชื่อผู้ใช้:</label>
-                <input type="text" id="username" name="username" required>
-                <br>
-                <label for="password">รหัสผ่าน:</label>
-                <input type="password" id="password" name="password" required>
-                <br>
+                <div class="input-group">
+                    <input type="text" id="username" name="username" placeholder="user" required>
+                </div>
+                <div class="input-group">
+                    <input type="password" id="password" name="password" placeholder="password" required>
+                </div>
+                
                 <button type="submit">เข้าสู่ระบบ</button>
             </form>
-        <footer>
-            <p> <img src="copy.svg" alt="icon">2025 วิทยาลัยเทคนิคเพชรบูรณ์ | พัฒนาโดยแผนกเทคโนโลยีคอมพิวเตอร์</p>
-        </footer>
+
+            <div class="help-text">
+                การเข้าใช้งานระบบนักเรียน - ศิษย์เก่าเข้าสู่ระบบโดยใช้<br>
+                ชื่อผู้ใช้งานคือ รหัสนักศึกษา<br>
+                รหัสผ่านคือ วัน/เดือน/ปีเกิด เช่น 30/12/2540
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <p>© 2025 วิทยาลัยเทคนิคเพชรบูรณ์ | พัฒนาโดยแผนกเทคโนโลยีคอมพิวเตอร์</p>
+    </footer>
+
+    <script src="Login.js"></script>
+
 </body>
-<script src="Login.js"></script>
 </html>
