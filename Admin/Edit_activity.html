@@ -17,7 +17,7 @@
             src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
         <script src="JavaScript//Edit_activity.js"></script>
         <link rel="stylesheet" href="../CSS/Edit_style.css">
-        
+        <script src="JavaScript/auth_guard.js"></script>
         <style>
             /* สไตล์เสริมสำหรับการแสดงผลตารางเช็กชื่อ */
             .attendance-table {
@@ -253,9 +253,9 @@
                             </select>
                         </div>
                         <div class="form-group">
-                            <label for="studentYear" class="required">ปี</label>
+                            <label for="studentYear">ปี</label>
                             <select id="studentYear" name="studentYear"
-                                required>
+                                >
                                 <option value>เลือกปี</option>
                             </select>
                         </div>

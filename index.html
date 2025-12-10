@@ -1,14 +1,17 @@
 <!DOCTYPE html>
 <html lang="th">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PBNTC Login</title>
-    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap" rel="stylesheet">
-    
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    
-    <style>
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>PBNTC Login</title>
+        <link
+            href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap"
+            rel="stylesheet">
+
+        <script
+            src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+        <style>
         /* --- 1. ตั้งค่าพื้นฐาน --- */
         body, html {
             margin: 0;
@@ -155,44 +158,49 @@
             gap: 5px;
         }
     </style>
-</head>
-<body>
+    </head>
+    <body>
 
-    <div class="header">
-        <div class="logo-area">
-            <img src="pbntc-logo.webp" alt="PBNTC Logo" class="logo">
-            <span>PBNTC</span>
-        </div>
-    </div>
-
-    <div class="main-container">
-        <div class="login-container">
-            <img src="pbntc-logo.webp" alt="Logo" class="login-logo">
-            
-            <form id="login">
-                <div class="input-group">
-                    <input type="text" id="username" name="username" placeholder="user" required>
-                </div>
-                <div class="input-group">
-                    <input type="password" id="password" name="password" placeholder="password" required>
-                </div>
-                
-                <button type="submit">เข้าสู่ระบบ</button>
-            </form>
-
-            <div class="help-text">
-                การเข้าใช้งานระบบนักเรียน - ศิษย์เก่าเข้าสู่ระบบโดยใช้<br>
-                ชื่อผู้ใช้งานคือ รหัสนักศึกษา<br>
-                รหัสผ่านคือ วัน/เดือน/ปีเกิด เช่น 30/12/2540
+        <div class="header">
+            <div class="logo-area">
+                <img src="pbntc-logo.webp" alt="PBNTC Logo" class="logo">
+                <span>PBNTC</span>
             </div>
         </div>
-    </div>
 
-    <footer>
-        <p>© 2025 วิทยาลัยเทคนิคเพชรบูรณ์ | พัฒนาโดยแผนกเทคโนโลยีคอมพิวเตอร์</p>
-    </footer>
+        <div class="main-container">
+            <div class="login-container">
+                <img src="pbntc-logo.webp" alt="Logo" class="login-logo">
 
-    <script src="Login.js"></script>
+                <form id="login">
+                    <div class="input-group">
+                        <input type="text" id="username" name="username"
+                            placeholder="รหัสนักศึกษา / ชื่อผู้ใช้ (Username)"
+                            required>
+                    </div>
+                    <div class="input-group">
+                        <input type="password" id="password" name="password"
+                            placeholder="เลขบัตรประชาชน / รหัสผ่าน" required>
+                    </div>
 
-</body>
+                    <button type="submit">เข้าสู่ระบบ</button>
+                </form>
+
+                <div class="help-text">
+                    <b>สำหรับนักเรียน:</b> ใช้รหัสนักศึกษา และ
+                    เลขบัตรประชาชน<br>
+                    <b>สำหรับอาจารย์/เจ้าหน้าที่:</b> ใช้ชื่อผู้ใช้ และ
+                    รหัสผ่านที่กำหนด
+                </div>
+            </div>
+        </div>
+
+        <footer>
+            <p>© 2025 วิทยาลัยเทคนิคเพชรบูรณ์ |
+                พัฒนาโดยแผนกเทคโนโลยีคอมพิวเตอร์</p>
+        </footer>
+
+        <script src="Login.js"></script>
+
+    </body>
 </html>

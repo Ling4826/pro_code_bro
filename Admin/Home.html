@@ -7,6 +7,7 @@
         <link rel="stylesheet"
             href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
         <link rel="stylesheet" href="../CSS/style.css">
+        <script src="JavaScript/auth_guard.js"></script>
     </head>
 
     <body>
@@ -149,6 +150,20 @@
         
         // เรียกทำงานครั้งแรกทันที ไม่ต้องรอ 1 วิ
         updateClock();
+
+        // ตัวอย่าง: ใส่ใน script ของหน้า Home.html
+document.addEventListener('DOMContentLoaded', () => {
+    // ดึงชื่อที่เก็บไว้
+    const name = sessionStorage.getItem('user_name');
+    const role = sessionStorage.getItem('user_role');
+
+    // ถ้ามีชื่อ ให้เอาไปใส่ใน element ที่ต้องการ
+    if (name) {
+        // สมมติใน HTML มี <span id="userNameDisplay"></span>
+        const displayEl = document.getElementById('userNameDisplay');
+        if (displayEl) displayEl.innerText = name;
+    }
+});
     </script>
     </body>
 </html>

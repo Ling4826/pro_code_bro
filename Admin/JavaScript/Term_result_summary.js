@@ -3,23 +3,20 @@ const SUPABASE_URL = 'https://pdqzkejlefozxquptoco.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBkcXprZWpsZWZvenhxdXB0b2NvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIzNDIyODAsImV4cCI6MjA3NzkxODI4MH0.EojnxNcGPj7eGlf7FAJOgMuEXIW54I2NQwB_L2Wj9DU';
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-let termScoreRows = []; // ข้อมูลดิบทั้งหมด
+let termScoreRows = []; 
 
 async function fetchTermScore() {
-    // แสดงสถานะ Loading
     document.getElementById("score-body").innerHTML = `
         <tr><td colspan="12" style="padding: 20px; color: #666;">กำลังดึงข้อมูล...</td></tr>
     `;
 
+    // ดึงข้อมูลเหมือนเดิม
     const { data, error } = await supabaseClient
         .from('term_score')
         .select(`
             id,
             semester,
             academic_year,
-            flag_ceremony_percentage,
-            department_activity_percentage,
-            is_passed,
             student:student_id (
                 id,
                 name,
@@ -51,14 +48,13 @@ async function fetchTermScore() {
         return null;
     }
 
-    // แปลงข้อมูลให้อยู่ในรูปแบบ Flat Data
     termScoreRows = data.map(row => {
         const student = row.student;
         const classInfo = student?.class;
         const major = classInfo?.major;
         const checks = student?.activity_check || [];
 
-        // คำนวณจำนวน (Counts) แยกตามประเภท
+        // 1. นับจำนวน (Counts)
         const flagList = checks.filter(c => c.activity?.activity_type === 'flag_ceremony');
         const flagTotal = flagList.length;
         const flagAttended = flagList.filter(c => c.status === 'Attended').length;
@@ -66,6 +62,15 @@ async function fetchTermScore() {
         const deptList = checks.filter(c => c.activity?.activity_type === 'activity');
         const deptTotal = deptList.length;
         const deptAttended = deptList.filter(c => c.status === 'Attended').length;
+
+        // 2. 🔥 คำนวณเปอร์เซ็นต์เองใน JS (เพื่อให้เป็นปัจจุบันที่สุด)
+        // สูตร: (จำนวนที่มา / จำนวนทั้งหมด) * 100
+        const calcFlagPercent = flagTotal > 0 ? (flagAttended / flagTotal) * 100 : 0;
+        const calcDeptPercent = deptTotal > 0 ? (deptAttended / deptTotal) * 100 : 0;
+
+        // 3. 🔥 คำนวณผลการผ่านเอง (เกณฑ์ 80%)
+        // ต้องผ่านทั้ง หน้าเสาธง(80%) และ กิจกรรม(80%)
+        const isPassedCalc = (calcFlagPercent >= 80) && (calcDeptPercent >= 80);
 
         return {
             id: row.id,
@@ -76,17 +81,17 @@ async function fetchTermScore() {
             year: classInfo?.year ?? "-",
             classNumber: classInfo?.class_number ?? "-",
 
-            // ข้อมูลสำหรับแสดงผลในตาราง
+            // ข้อความแสดงจำนวนครั้ง
             flagText: `${flagAttended}/${flagTotal}`,
             deptText: `${deptAttended}/${deptTotal}`,
             
-            // ข้อมูลสำหรับ Popup (เก็บค่าตัวเลขดิบไว้ใช้)
             flagAttended, flagTotal,
             deptAttended, deptTotal,
 
-            percentFlag: row.flag_ceremony_percentage,       
-            percentActivity: row.department_activity_percentage, 
-            isPassed: row.is_passed
+            // ✅ ใช้ค่าที่คำนวณใหม่แทนค่าจาก DB
+            percentFlag: parseFloat(calcFlagPercent.toFixed(2)),       
+            percentActivity: parseFloat(calcDeptPercent.toFixed(2)), 
+            isPassed: isPassedCalc
         };
     });
 
@@ -94,7 +99,8 @@ async function fetchTermScore() {
     renderFilteredTable();
 }
 
-/* ... (ฟังก์ชัน Filter ส่วนเดิม ไม่ต้องแก้) ... */
+/* ... (ส่วน Filter คงเดิม ไม่ต้องแก้) ... */
+
 function initFilters() {
     const uniqueLevels = [...new Set(termScoreRows.map(r => r.level))].filter(l => l !== "-").sort();
     fillSelect("level", uniqueLevels, "ทุกระดับ");
@@ -172,11 +178,11 @@ function renderFilteredTable() {
     }
 
     tbody.innerHTML = filtered.map(row => {
+        // ใช้ row.isPassed ที่เราคำนวณใหม่
         const passBadge = row.isPassed 
             ? '<span class="status-badge status-pass">ผ่าน</span>' 
             : '<span class="status-badge status-fail">ไม่ผ่าน</span>';
 
-        // เพิ่ม onclick ให้เรียก openStudentModal
         return `
         <tr style="cursor: pointer;" onclick="openStudentModal('${row.id}')">
             <td>${row.student_id}</td>
@@ -201,13 +207,11 @@ function renderFilteredTable() {
     }).join("");
 }
 
-// 🔥 ฟังก์ชันเปิด Popup (Modal)
+// 🔥 ฟังก์ชันเปิด Popup
 function openStudentModal(rowId) {
-    // หาข้อมูลนักเรียนจาก array
     const row = termScoreRows.find(r => r.id.toString() === rowId.toString());
     if (!row) return;
 
-    // เซ็ตชื่อนักเรียน
     document.getElementById('modalStudentName').textContent = row.studentName;
 
     // --- การ์ดซ้าย: หน้าเสาธง ---
@@ -215,15 +219,14 @@ function openStudentModal(rowId) {
     document.getElementById('flagAttended').textContent = `${row.flagAttended} ครั้ง`;
     document.getElementById('flagPercent').textContent = `${row.percentFlag}%`;
     
-    // เปลี่ยนไอคอนและสีตามคะแนน (สมมติ 80% ผ่าน)
     const flagIcon = document.getElementById('flagIcon');
     const flagCard = document.getElementById('flagCard');
     if (row.percentFlag >= 80) {
         flagIcon.className = "fas fa-check";
-        flagCard.className = "card-detail card-blue"; // สีฟ้า/เขียว
+        flagCard.className = "card-detail card-blue";
     } else {
         flagIcon.className = "fas fa-times";
-        flagCard.className = "card-detail card-red"; // สีแดง
+        flagCard.className = "card-detail card-red";
     }
 
     // --- การ์ดขวา: กิจกรรม ---
@@ -241,16 +244,13 @@ function openStudentModal(rowId) {
         deptCard.className = "card-detail card-red";
     }
 
-    // แสดง Modal
     document.getElementById('studentModal').style.display = 'flex';
 }
 
-// ฟังก์ชันปิด Popup
 function closeStudentModal() {
     document.getElementById('studentModal').style.display = 'none';
 }
 
-// ปิดเมื่อคลิกพื้นหลัง
 window.onclick = function(event) {
     const modal = document.getElementById('studentModal');
     if (event.target == modal) {
