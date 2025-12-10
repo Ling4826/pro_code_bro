@@ -214,7 +214,8 @@ async function loadActivity() {
             .from('activity')
             .select(`
                 id, 
-                name, 
+                name,
+                activity_type,
                 start_time, 
                 end_time, 
                 is_recurring, 
@@ -254,7 +255,7 @@ async function loadActivity() {
 
         // 4. Set ค่าใน Form (ยกเว้น Dropdown)
         setValue('activityName', activity.name || '');
-
+        setValue('activityType', activity.activity_type || 'activity');
         setValue('recurringDays', activity.is_recurring ? 1 : 0);
         setValue('semester', initialSemester || '');
 
@@ -336,7 +337,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
 
-
+            
 
             try {
                
@@ -378,7 +379,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         const levelSelect = document.getElementById('level');
         const departmentSelect = document.getElementById('department');
         const studentYearSelect = document.getElementById('studentYear');
-
         // Event 1: Level Change (Level -> Department + Year)
         levelSelect?.addEventListener('change', async (e) => {
             const selectedLevel = e.target.value;
