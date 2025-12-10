@@ -1,323 +1,223 @@
 // เปลี่ยน YOUR_SUPABASE_URL และ YOUR_SUPABASE_ANON_KEY ด้วยค่าจริงของคุณ
 const SUPABASE_URL = 'https://pdqzkejlefozxquptoco.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBkcXprZWpsZWZvenhxdXB0b2NvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIzNDIyODAsImV4cCI6MjA3NzkxODI4MH0.EojnxNcGPj7eGlf7FAJOgMuEXIW54I2NQwB_L2Wj9DU'; // Key ของคุณ
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBkcXprZWpsZWZvenhxdXB0b2NvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIzNDIyODAsImV4cCI6MjA3NzkxODI4MH0.EojnxNcGPj7eGlf7FAJOgMuEXIW54I2NQwB_L2Wj9DU';
 
-// สร้าง Supabase Client
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-const CACHE_KEY = "activitiesCache";
-const CACHE_TTL = 5 * 60 * 1000; // 5 นาที
-const CACHE_KEY_STUDENTS = "studentsCache";
-const CACHE_KEY_CLASSES = "classesCache";
-let allStudents = new Set();
-let allClassesByMajorYear = {}; // { "majorId_year": Set(classId) }
 
+let currentActivities = []; // เก็บข้อมูลกิจกรรมล่าสุด
+let isFirstLoad = true;
+
+// ฟังก์ชันหลักดึงข้อมูล (ทำงานตลอดทุก 3 วินาที)
 async function fetchActivities() {
-    // เช็ก cache ก่อน
-    const cached = localStorage.getItem(CACHE_KEY);
-    if (cached) {
-        const start = performance.now();
-        const parsed = JSON.parse(cached);
-        const now = new Date().getTime();
-        if (now - parsed.timestamp < CACHE_TTL) {
-            console.log("ใช้ cache จาก localStorage");
-            const activities = parsed.data;
-
-            document.getElementById("exportExcelBtn")
-                .addEventListener("click", () => exportToExcel(activities));
-
-            LoadDate(activities);
-            setupFilters(activities);
-            const end = performance.now();
-            console.log(`fetchData จาก cache ใช้เวลา ${(end - start).toFixed(3)} ms`);
-            return;
-        } else {
-            console.log("หมดอายุ cache, ดึงข้อมูลใหม่");
-        }
-    }
-    const start = performance.now();
-    // ถ้าไม่มี cache หรือหมดอายุ ให้ fetch จริง
-    const { data: activities, error } = await supabaseClient
-        .from('activity')
-        .select(`
-            id,
-            name,
-            start_time,
-            end_time,
-            is_recurring,
-            class:class_id (
+    try {
+        // ดึงกิจกรรม + รายการเช็คชื่อ (เพื่อนับจำนวน)
+        const { data: activities, error } = await supabaseClient
+            .from('activity')
+            .select(`
                 id,
-                class_name,
-                year,
-                class_number,
-                major:major_id (
+                name,
+                start_time,
+                end_time,
+                is_recurring,
+                class:class_id (
                     id,
-                    name,
-                    level
+                    class_name,
+                    year,
+                    class_number,
+                    major:major_id (
+                        id,
+                        name,
+                        level
+                    )
+                ),
+                check:activity_check (
+                    id,
+                    status
                 )
-            ),
-            check:activity_check (
-                id,
-                student_id,
-                status,
-                date,
-                semester,
-                academic_year
-            )
-        `)
-        .order('start_time', { ascending: true });
-        const end = performance.now();
-        console.log(`fetchData ใช้เวลา ${(end - start).toFixed(3)} ms`);
-    if (error) {
-        console.error('Error fetching activities:', error.message);
-        container.innerHTML = '<p>ไม่สามารถดึงรายการกิจกรรมได้</p>';
-        return;
-    }
+            `)
+            .order('start_time', { ascending: true });
 
-    console.log("Activities:", activities);
+        if (error) throw error;
 
-    // เก็บ cache ลง localStorage
-    localStorage.setItem(CACHE_KEY, JSON.stringify({
-        timestamp: new Date().getTime(),
-        data: activities
-    }));
+        currentActivities = activities;
 
-    document.getElementById("exportExcelBtn")
-        .addEventListener("click", () => exportToExcel(activities));
+        // ถ้าโหลดครั้งแรก ให้สร้างตัวเลือกวันที่
+        if (isFirstLoad) {
+            LoadDateOptions(activities);
+            setupFilterListeners();
+            isFirstLoad = false;
+        } else {
+            // โหลดครั้งต่อๆ ไป (Auto refresh) อัปเดตเฉพาะตัวเลือกวันที่ใหม่ๆ
+            LoadDateOptions(activities, true); 
+        }
 
-    LoadDate(activities);
-    setupFilters(activities);
-}
+        applyFiltersAndRender();
 
-function formatTime(ts) {
-    return new Date(ts).toLocaleTimeString('th-TH', {
-        hour: '2-digit',
-        minute: '2-digit'
-    });
-}
-function formatDate(ts) {
-    return new Date(ts).toLocaleDateString('th-TH', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit'
-    });
-}
-async function loadCache() {
-    // โหลด student จาก cache หรือ Supabase
-    const cachedStudents = localStorage.getItem(CACHE_KEY_STUDENTS);
-    if (cachedStudents) {
-        const parsed = JSON.parse(cachedStudents);
-        allStudents = new Set(parsed.map(s => JSON.stringify(s))); // store {id,class_id} as string
-        console.log("Loaded students from cache");
-    } else {
-        const { data: students } = await supabaseClient
-            .from('student')
-            .select('id, class_id');
-        allStudents = new Set(students.map(s => JSON.stringify(s)));
-        localStorage.setItem(CACHE_KEY_STUDENTS, JSON.stringify(students));
-        console.log("Fetched students from Supabase");
-    }
-
-    // โหลด class จาก cache หรือ Supabase
-    const cachedClasses = localStorage.getItem(CACHE_KEY_CLASSES);
-    if (cachedClasses) {
-        const parsed = JSON.parse(cachedClasses);
-        allClassesByMajorYear = {};
-        parsed.forEach(c => {
-            const key = `${c.major_id}_${c.year}`;
-            if (!allClassesByMajorYear[key]) allClassesByMajorYear[key] = new Set();
-            allClassesByMajorYear[key].add(c.id);
-        });
-        console.log("Loaded classes from cache");
-    } else {
-        const { data: classes } = await supabaseClient
-            .from('class')
-            .select('id, major_id, year');
-        allClassesByMajorYear = {};
-        classes.forEach(c => {
-            const key = `${c.major_id}_${c.year}`;
-            if (!allClassesByMajorYear[key]) allClassesByMajorYear[key] = new Set();
-            allClassesByMajorYear[key].add(c.id);
-        });
-        localStorage.setItem(CACHE_KEY_CLASSES, JSON.stringify(classes));
-        console.log("Fetched classes from Supabase");
+    } catch (err) {
+        console.error('Error fetching activities:', err.message);
     }
 }
-function LoadDate(activities) {
+
+// สร้าง Options ให้ Dropdown (วัน/เดือน/ปี)
+function LoadDateOptions(activities, keepSelection = false) {
     const daySelect = document.getElementById('daySelect');
     const monthSelect = document.getElementById('monthSelect');
     const yearSelect = document.getElementById('yearSelect');
+
+    // จำค่าเดิมไว้ก่อน ถ้าสั่งให้ keepSelection
+    const currentDay = keepSelection ? daySelect.value : "";
+    const currentMonth = keepSelection ? monthSelect.value : "";
+    const currentYear = keepSelection ? yearSelect.value : "";
 
     const days = new Set();
     const months = new Set();
     const years = new Set();
 
     activities.forEach(act => {
-        const d = new Date(act.start_time);
-        days.add(d.getDate());
-        months.add(d.getMonth() + 1);
-        years.add(d.getFullYear() + 543);
+        if(act.start_time) {
+            const d = new Date(act.start_time);
+            days.add(d.getDate());
+            months.add(d.getMonth() + 1);
+            years.add(d.getFullYear() + 543);
+        }
     });
-    // Create All option
-    daySelect.innerHTML = `<option value="">All</option>`;
-    monthSelect.innerHTML = `<option value="">All</option>`;
-    yearSelect.innerHTML = `<option value="">All</option>`;
-    // สร้าง option
-    days.forEach(d => daySelect.innerHTML += `<option value="${d}">${d}</option>`);
-    months.forEach(m => monthSelect.innerHTML += `<option value="${m}">${m}</option>`);
-    years.forEach(y => yearSelect.innerHTML += `<option value="${y}">${y}</option>`);
+
+    daySelect.innerHTML = `<option value="">ทั้งหมด</option>`;
+    monthSelect.innerHTML = `<option value="">ทั้งหมด</option>`;
+    yearSelect.innerHTML = `<option value="">ทั้งหมด</option>`;
+
+    Array.from(days).sort((a,b)=>a-b).forEach(d => daySelect.innerHTML += `<option value="${d}">${d}</option>`);
+    Array.from(months).sort((a,b)=>a-b).forEach(m => monthSelect.innerHTML += `<option value="${m}">${m}</option>`);
+    Array.from(years).sort((a,b)=>a-b).forEach(y => yearSelect.innerHTML += `<option value="${y}">${y}</option>`);
+
+    // คืนค่าที่เลือกไว้กลับไป
+    if(currentDay) daySelect.value = currentDay;
+    if(currentMonth) monthSelect.value = currentMonth;
+    if(currentYear) yearSelect.value = currentYear;
 }
 
-function setupFilters(activities) {
-    const daySelect = document.getElementById('daySelect');
-    const monthSelect = document.getElementById('monthSelect');
-    const yearSelect = document.getElementById('yearSelect');
-
-    // ค่าเริ่มต้นเป็นค่าว่างทั้งหมด
-    daySelect.value = "";
-    monthSelect.value = "";
-    yearSelect.value = "";
-
-    function applyFilter() {
-        const dVal = daySelect.value;
-        const mVal = monthSelect.value;
-        const yVal = yearSelect.value;
-
-        const filtered = activities.filter(act => {
-            const d = toLocalDate(act.start_time);
-
-
-            const day = d.getDate();
-            const month = d.getMonth() + 1;
-            const year = d.getFullYear() + 543;
-
-            const matchDay = dVal ? day === parseInt(dVal) : true;
-            const matchMonth = mVal ? month === parseInt(mVal) : true;
-            const matchYear = yVal ? year === parseInt(yVal) : true;
-
-            return matchDay && matchMonth && matchYear;
-        });
-console.log("filter values:", dVal, mVal, yVal);
-        RenderTable(filtered);
-    }
-
-    // applyFilter จะรันเฉพาะเมื่อมีการเปลี่ยนค่า select
-    daySelect.addEventListener('change', applyFilter);
-    monthSelect.addEventListener('change', applyFilter);
-    yearSelect.addEventListener('change', applyFilter);
-
-
-    // เรียก RenderTable ครั้งแรกแบบไม่กรอง
-    applyFilter();
+function setupFilterListeners() {
+    document.getElementById('daySelect').addEventListener('change', applyFiltersAndRender);
+    document.getElementById('monthSelect').addEventListener('change', applyFiltersAndRender);
+    document.getElementById('yearSelect').addEventListener('change', applyFiltersAndRender);
 }
 
+function applyFiltersAndRender() {
+    const dVal = document.getElementById('daySelect').value;
+    const mVal = document.getElementById('monthSelect').value;
+    const yVal = document.getElementById('yearSelect').value;
 
-function toLocalDate(dateString) {
-    const d = new Date(dateString);
-    return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    const filtered = currentActivities.filter(act => {
+        if(!act.start_time) return false;
+        const d = new Date(act.start_time);
+        const day = d.getDate();
+        const month = d.getMonth() + 1;
+        const year = d.getFullYear() + 543;
+
+        const matchDay = dVal ? day === parseInt(dVal) : true;
+        const matchMonth = mVal ? month === parseInt(mVal) : true;
+        const matchYear = yVal ? year === parseInt(yVal) : true;
+
+        return matchDay && matchMonth && matchYear;
+    });
+
+    RenderTable(filtered);
 }
-
 
 function RenderTable(activities) {
-    const start = performance.now();
     const container = document.getElementById('activityCheckTableBody');
-    container.innerHTML = "";
+    if (!container) return;
 
     const rows = activities.map(act => {
         const startTime = formatTime(act.start_time);
         const endTime = formatTime(act.end_time);
-        const Date = formatDate(act.start_time);
-        const major = act.class?.major?.name ?? null;
-        const level = act.class?.major?.level ?? null;
-        const year = act.class?.year ?? null;
-        const className = act.class?.class_name ?? null;
-        let totalStudents = 0;
-        let attendedCount = 0;
+        const dateStr = formatDate(act.start_time);
+        
+        // 🔥🔥🔥 แก้ไขตรงนี้: เปลี่ยนเครื่องหมาย - เป็นคำว่า "ทุก..." 🔥🔥🔥
+        const major = act.class?.major?.name ?? 'ทุกสาขา';
+        const level = act.class?.major?.level ?? 'ทุกระดับ';
+        const year = act.class?.year ?? 'ทุกชั้นปี';
+        const className = act.class?.class_name ?? 'ทุกห้อง';
 
-        if (!major || !level || !year) {
-            // ทั้งโรงเรียน
-            totalStudents = allStudents.size;
-            attendedCount = act.check
-                ? act.check.filter(c => c.status === "Attended").length
-                : 0;
-        } else {
-            const key = `${act.class.major.id}_${year}`;
-            const classIds = allClassesByMajorYear[key] ?? new Set();
+        // นับจำนวนจาก activity_check โดยตรง
+        const checkList = act.check || [];
+        const totalStudents = checkList.length; 
+        const attendedCount = checkList.filter(c => c.status === "Attended").length;
 
-            // students ใน classIds
-            const students = Array.from(allStudents)
-                .map(s => JSON.parse(s))
-                .filter(s => classIds.has(s.class_id))
-                .map(s => s.id);
-
-            totalStudents = students.length;
-            attendedCount = act.check
-                ? act.check.filter(c => students.includes(c.student_id)).length
-                : 0;
-        }
-
+        // คำนวณเปอร์เซ็นต์
         const percent = totalStudents > 0
             ? Math.round((attendedCount / totalStudents) * 100)
             : 0;
 
-        const statusChecks =
-            !act.check || act.check.length === 0
-                ? "ยังไม่เช็ก"
-                : attendedCount === totalStudents
-                    ? "เช็กครบ"
-                    : "ยังไม่ครบ";
+        // กำหนดสถานะ
+        let statusText = "ยังไม่เช็ก";
+        let statusClass = "unchecked";
+
+        if (totalStudents > 0) {
+            const isStarted = checkList.some(c => c.status !== null);
+            
+            if (!isStarted) {
+                statusText = "ยังไม่เช็ก";
+                statusClass = "unchecked";
+            } else if (attendedCount === totalStudents) {
+                statusText = "มาครบ";
+                statusClass = "checked";
+            } else {
+                statusText = "ยังไม่ครบ";
+                statusClass = "partial";
+            }
+        } else {
+            statusText = "ไม่มีรายชื่อ";
+            statusClass = "unchecked";
+        }
 
         return `
         <tr>
             <td>${act.name}</td>
-            <td>${Date}</td>
+            <td>${dateStr}</td>
             <td>${startTime} - ${endTime}</td>
-            <td>${major ?? 'ทุกสาขา'}</td>
-            <td>${level ?? 'ทุกระดับ'}</td>
-            <td>${year ?? 'ทุกปี'}</td>
-            <td>${className ?? 'ทุกห้อง'}</td>
-            <td class="status-cell ${statusChecks === "เช็กครบ" ? "checked" : "unchecked"}">
-                ${statusChecks}
+            <td>${major}</td>
+            <td>${level}</td>
+            <td>${year}</td>
+            <td>${className}</td>
+            <td class="status-cell">
+                <span class="${statusClass}" style="font-weight:bold;">${statusText}</span>
             </td>
-            <td>${attendedCount} / ${totalStudents} คน (${percent}%)</td>
+            <td>
+                <strong>${attendedCount} / ${totalStudents}</strong>
+                <span style="color:#666; font-size:0.9em;">(${percent}%)</span>
+            </td>
         </tr>`;
     });
 
-    container.innerHTML = rows.join('');
-    const end = performance.now();
-    console.log(`RenderTable (cached + Set) ใช้เวลา ${(end - start).toFixed(3)} ms`);
+    container.innerHTML = rows.length > 0 ? rows.join('') : '<tr><td colspan="9" style="text-align:center; padding: 20px;">ไม่พบข้อมูลกิจกรรม</td></tr>';
 }
 
-async function autoCheckUpdates() {
-    const { data, error } = await supabaseClient
-        .from('activity')
-        .select('id', { count: 'exact' });
-
-    if (error) return console.error(error);
-
-    if (data.length !== lastCount) {
-        console.log("มีข้อมูลอัปเดต → โหลดใหม่");
-        lastCount = data.length;
-        fetchActivities();
-    }
+// Helpers
+function formatTime(ts) {
+    if(!ts) return "-";
+    return new Date(ts).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
 }
-function exportToExcel(activities) {
-    alert("กำลังพัฒนาฟีเจอร์นี้...");
+function formatDate(ts) {
+    if(!ts) return "-";
+    return new Date(ts).toLocaleDateString('th-TH', { year: 'numeric', month: '2-digit', day: '2-digit' });
 }
-async function initCount() {
-    const { data, error } = await supabaseClient
-        .from('activity')
-        .select('id', { count: 'exact' });
 
-    if (!error) {
-        lastCount = data.length; // ตั้งค่าเริ่มต้น
-        console.log("Initial count:", lastCount);
-    }
+function exportToExcel() {
+    alert("กำลังพัฒนาฟีเจอร์ Export Excel...");
 }
+
+// เริ่มทำงาน
 document.addEventListener('DOMContentLoaded', async () => {
-    await initCount();
-    await loadCache();     // ตั้งค่า lastCount ก่อน
+    // 1. ผูกปุ่ม Excel
+    const excelBtn = document.getElementById("exportExcelBtn");
+    if(excelBtn) excelBtn.addEventListener("click", exportToExcel);
+
+    // 2. โหลดครั้งแรก
     await fetchActivities();
-    setInterval(autoCheckUpdates, 5000);  // เริ่มตรวจอัปเดตหลังตั้งค่าแล้ว
+
+    // 3. ตั้งเวลาโหลดอัตโนมัติทุก 3 วินาที
+    setInterval(() => {
+        fetchActivities();
+    }, 3000); 
 });
-
-

@@ -8,7 +8,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <link rel="stylesheet" href="../CSS/style.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="JavaScript//Overview_activity.js"></script>
+    <script src="JavaScript/Overview_activity.js"></script>
     <style>
         /* CSS เฉพาะสำหรับหน้านี้ */
         .controls-row {
@@ -103,6 +103,51 @@
             margin-right: 5px;
             font-size: 18px;
         }
+        /* =========================================
+   ส่วนรองรับมือถือ (Mobile Responsive)
+   ก๊อปปี้ไปใส่ใน Create_activity.html และ Overview_activity.html
+   ========================================= */
+@media screen and (max-width: 1024px) {
+    /* 1. ปรับฟอร์มให้เรียงแนวตั้ง (สำหรับหน้า Create) */
+    .form-row, .controls-row {
+        flex-direction: column;
+        gap: 15px;
+        align-items: stretch; /* ให้ขยายเต็มความกว้าง */
+    }
+
+    .form-group, .input-icon-group, .date-controls, .export-button {
+        width: 100% !important;
+        min-width: unset; /* ยกเลิกการจำกัดความกว้างขั้นต่ำ */
+    }
+    
+    .date-controls {
+        flex-direction: column; /* เรียงตัวเลือกวันที่ลงมาแนวตั้ง */
+        align-items: stretch;
+    }
+
+    /* 2. ปรับตารางให้เลื่อนซ้ายขวาได้ (สำคัญมากสำหรับหน้า Overview) */
+    .activity-table, .data-table {
+        display: block;
+        width: 100%;
+        overflow-x: auto; /* อนุญาตให้เลื่อนแนวนอน */
+        white-space: nowrap; /* ห้ามตัดคำในตาราง */
+    }
+
+    /* 3. เพิ่มพื้นที่ด้านล่างให้เลื่อนสุดจอได้สะดวก */
+    .content {
+        padding-bottom: 100px !important;
+        padding-left: 15px;
+        padding-right: 15px;
+        overflow-x: hidden;
+    }
+    
+    /* 4. ปรับปุ่มกดให้เต็มจอ */
+    .create-button, .export-button {
+        width: 100%;
+        margin-top: 15px;
+        justify-content: center;
+    }
+}
     </style>
 </head>
 <body>

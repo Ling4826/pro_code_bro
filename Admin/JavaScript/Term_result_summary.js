@@ -30,16 +30,15 @@ async function fetchTermScore() {
                     major:major_id (
                         id,
                         name,
-                        level,
-                        teacher_major (
-                            teacher:teacher_id (id, name)
-                        )
+                        level
                     )
                 ),
                 activity_check (
                     id,
-                    activity_id,
-                    status
+                    status,
+                    activity:activity_id ( 
+                        activity_type 
+                    )
                 )
             )
         `);
@@ -52,153 +51,101 @@ async function fetchTermScore() {
         return null;
     }
 
-    // แปลงข้อมูลให้อยู่ในรูปแบบ Flat Data เพื่อให้ง่ายต่อการกรอง
+    // แปลงข้อมูลให้อยู่ในรูปแบบ Flat Data
     termScoreRows = data.map(row => {
         const student = row.student;
         const classInfo = student?.class;
         const major = classInfo?.major;
+        const checks = student?.activity_check || [];
 
-        const advisorList = major?.teacher_major?.map(tm => tm.teacher.name) || [];
-        const activityCount = row.activity_check?.filter(a => a.status === "Attended").length || 0;
+        // คำนวณจำนวน (Counts) แยกตามประเภท
+        const flagList = checks.filter(c => c.activity?.activity_type === 'flag_ceremony');
+        const flagTotal = flagList.length;
+        const flagAttended = flagList.filter(c => c.status === 'Attended').length;
+
+        const deptList = checks.filter(c => c.activity?.activity_type === 'activity');
+        const deptTotal = deptList.length;
+        const deptAttended = deptList.filter(c => c.status === 'Attended').length;
 
         return {
             id: row.id,
             student_id: student?.id ?? "-",
             studentName: student?.name ?? "-",
-
-            // ข้อมูลสำหรับ Filter
             majorName: major?.name ?? "-",
-            level: major?.level ?? "-", // ใช้ Level จาก Database โดยตรง
+            level: major?.level ?? "-",
             year: classInfo?.year ?? "-",
             classNumber: classInfo?.class_number ?? "-",
 
-            percentFlag: row.flag_ceremony_percentage,       // คะแนนเข้าแถว
-            percentActivity: row.department_activity_percentage, // คะแนนกิจกรรม
-            isPassed: row.is_passed // ผลการประเมินรวม
+            // ข้อมูลสำหรับแสดงผลในตาราง
+            flagText: `${flagAttended}/${flagTotal}`,
+            deptText: `${deptAttended}/${deptTotal}`,
+            
+            // ข้อมูลสำหรับ Popup (เก็บค่าตัวเลขดิบไว้ใช้)
+            flagAttended, flagTotal,
+            deptAttended, deptTotal,
+
+            percentFlag: row.flag_ceremony_percentage,       
+            percentActivity: row.department_activity_percentage, 
+            isPassed: row.is_passed
         };
     });
 
-    // เริ่มต้นระบบ Filter (Cascading)
     initFilters();
-
-    // แสดงตารางครั้งแรก
     renderFilteredTable();
 }
 
-// ============================================
-// === SMART FILTER LOGIC (Cascading) ===
-// ============================================
-
+/* ... (ฟังก์ชัน Filter ส่วนเดิม ไม่ต้องแก้) ... */
 function initFilters() {
-    // 1. ดึง Level ทั้งหมดที่มีในระบบมาใส่ Dropdown แรกสุด
-    // (บางทีใน DB อาจเก็บเป็น "ปวช." หรือ "Vocational Certificate" ต้องเช็คดีๆ)
-    // ในที่นี้สมมติว่าใน DB major.level เก็บคำว่า "ปวช." หรือ "ปวส."
-
-    // ถ้าอยาก Hardcode เพื่อความสวยงามก็ได้ แต่ถ้าเอาจาก DB ก็ใช้แบบนี้:
     const uniqueLevels = [...new Set(termScoreRows.map(r => r.level))].filter(l => l !== "-").sort();
     fillSelect("level", uniqueLevels, "ทุกระดับ");
-
-    // เมื่อ Level เปลี่ยน -> ให้ไปอัปเดต Major
-    document.getElementById("level").addEventListener("change", () => {
-        updateMajorDropdown();
-        updateYearAndRoomDropdown(); // รีเซ็ตลูกๆ
-        renderFilteredTable();
-    });
-
-    // เมื่อ Major เปลี่ยน -> ให้ไปอัปเดต Year และ Room
-    document.getElementById("department").addEventListener("change", () => {
-        updateYearAndRoomDropdown();
-        renderFilteredTable();
-    });
-
-    // เมื่อ Year/Room เปลี่ยน -> แค่ Render ตารางใหม่
+    document.getElementById("level").addEventListener("change", () => { updateMajorDropdown(); updateYearAndRoomDropdown(); renderFilteredTable(); });
+    document.getElementById("department").addEventListener("change", () => { updateYearAndRoomDropdown(); renderFilteredTable(); });
     document.getElementById("studentYear").addEventListener("change", renderFilteredTable);
     document.getElementById("classNumber").addEventListener("change", renderFilteredTable);
     document.getElementById("searchInput").addEventListener("input", renderFilteredTable);
-
-    // Initial populate
     updateMajorDropdown();
     updateYearAndRoomDropdown();
 }
 
 function updateMajorDropdown() {
     const levelSelect = document.getElementById("level");
-    const selectedLevel = levelSelect.value;
-
-    // กรองเอาเฉพาะข้อมูลที่ตรงกับ Level ที่เลือก
-    let filteredRows = termScoreRows;
-    if (selectedLevel) {
-        filteredRows = termScoreRows.filter(r => r.level === selectedLevel);
-    }
-
-    // ดึงรายชื่อสาขาจากข้อมูลที่กรองแล้ว
+    const filteredRows = levelSelect.value ? termScoreRows.filter(r => r.level === levelSelect.value) : termScoreRows;
     const uniqueMajors = [...new Set(filteredRows.map(r => r.majorName))].sort();
-
-    // เติมเข้า Dropdown สาขา
     fillSelect("department", uniqueMajors, "ทุกสาขาวิชา");
 }
 
 function updateYearAndRoomDropdown() {
-    const levelSelect = document.getElementById("level");
-    const majorSelect = document.getElementById("department");
-
-    const selectedLevel = levelSelect.value;
-    const selectedMajor = majorSelect.value;
-
-    // กรองข้อมูลตาม Level และ Major ที่เลือกอยู่
+    const level = document.getElementById("level").value;
+    const major = document.getElementById("department").value;
     let filteredRows = termScoreRows;
-    if (selectedLevel) {
-        filteredRows = filteredRows.filter(r => r.level === selectedLevel);
-    }
-    if (selectedMajor) {
-        filteredRows = filteredRows.filter(r => r.majorName === selectedMajor);
-    }
+    if (level) filteredRows = filteredRows.filter(r => r.level === level);
+    if (major) filteredRows = filteredRows.filter(r => r.majorName === major);
 
-    // ดึงชั้นปี และ ห้อง ที่เป็นไปได้จากข้อมูลชุดนั้น
     const uniqueYears = [...new Set(filteredRows.map(r => r.year))].sort((a, b) => a - b);
     const uniqueRooms = [...new Set(filteredRows.map(r => r.classNumber))].sort((a, b) => a - b);
-
-    // เติม Dropdown (เก็บค่าเดิมไว้ถ้ามี แต่ถ้าค่าเดิมไม่อยู่ในลิสต์ใหม่ มันจะเด้งออกเอง)
-    const currentYear = document.getElementById("studentYear").value;
-    const currentRoom = document.getElementById("classNumber").value;
-
+    
     fillSelect("studentYear", uniqueYears, "ทุกชั้นปี", "ปี ");
     fillSelect("classNumber", uniqueRooms, "ทุกห้อง", "ห้อง ");
-
-    // พยายามคืนค่าเดิมกลับไปถ้ามันยัง valid อยู่
-    if (uniqueYears.includes(Number(currentYear)) || uniqueYears.includes(currentYear)) {
-        document.getElementById("studentYear").value = currentYear;
-    }
-    if (uniqueRooms.includes(Number(currentRoom)) || uniqueRooms.includes(currentRoom)) {
-        document.getElementById("classNumber").value = currentRoom;
-    }
 }
 
-// Helper Function: เติม Option เข้า Select
 function fillSelect(elementId, items, placeholder, prefix = "") {
     const select = document.getElementById(elementId);
     if (!select) return;
-
-    // ล้างของเก่า
+    const currentVal = select.value;
     select.innerHTML = `<option value="">${placeholder}</option>`;
-
     items.forEach(item => {
-        if (item !== "-" && item !== null && item !== undefined) {
+        if (item !== "-" && item != null) {
             const option = document.createElement("option");
             option.value = item;
             option.textContent = prefix + item;
             select.appendChild(option);
         }
     });
+    if (items.includes(Number(currentVal)) || items.includes(currentVal)) select.value = currentVal;
 }
-
-// ============================================
-// === FILTER TABLE LOGIC ===
-// ============================================
 
 function getFilteredRows() {
     let rows = [...termScoreRows];
-
     const level = document.getElementById("level").value;
     const department = document.getElementById("department").value;
     const year = document.getElementById("studentYear").value;
@@ -210,9 +157,10 @@ function getFilteredRows() {
     if (year) rows = rows.filter(r => r.year == year);
     if (room) rows = rows.filter(r => r.classNumber == room);
     if (searchName) rows = rows.filter(r => r.studentName.toLowerCase().includes(searchName));
-
     return rows;
 }
+
+/* ====== RENDER TABLE & POPUP ====== */
 
 function renderFilteredTable() {
     const filtered = getFilteredRows();
@@ -228,23 +176,88 @@ function renderFilteredTable() {
             ? '<span class="status-badge status-pass">ผ่าน</span>' 
             : '<span class="status-badge status-fail">ไม่ผ่าน</span>';
 
+        // เพิ่ม onclick ให้เรียก openStudentModal
         return `
-        <tr>
+        <tr style="cursor: pointer;" onclick="openStudentModal('${row.id}')">
             <td>${row.student_id}</td>
-            <td style="font-weight: bold;">${row.studentName}</td>
+            <td style="font-weight: bold; color: #007bff;">${row.studentName}</td>
             <td>${row.majorName}</td>
             <td>${row.year}</td>
             <td>${row.classNumber}</td>
             
-            <td>${row.percentFlag}%</td>     
-            <td>${row.percentActivity}%</td> 
+            <td style="text-align:center;">
+                <div style="font-weight:bold; font-size:1.1em;">${row.flagText}</div>
+                <div style="font-size:0.85em; color:#666;">(${row.percentFlag}%)</div>
+            </td>     
+            
+            <td style="text-align:center;">
+                <div style="font-weight:bold; font-size:1.1em;">${row.deptText}</div>
+                <div style="font-size:0.85em; color:#666;">(${row.percentActivity}%)</div>
+            </td> 
+
             <td>${passBadge}</td>
         </tr>
         `;
     }).join("");
 }
 
-// เริ่มทำงานเมื่อโหลดหน้าเสร็จ
+// 🔥 ฟังก์ชันเปิด Popup (Modal)
+function openStudentModal(rowId) {
+    // หาข้อมูลนักเรียนจาก array
+    const row = termScoreRows.find(r => r.id.toString() === rowId.toString());
+    if (!row) return;
+
+    // เซ็ตชื่อนักเรียน
+    document.getElementById('modalStudentName').textContent = row.studentName;
+
+    // --- การ์ดซ้าย: หน้าเสาธง ---
+    document.getElementById('flagTotal').textContent = `${row.flagTotal} ครั้ง`;
+    document.getElementById('flagAttended').textContent = `${row.flagAttended} ครั้ง`;
+    document.getElementById('flagPercent').textContent = `${row.percentFlag}%`;
+    
+    // เปลี่ยนไอคอนและสีตามคะแนน (สมมติ 80% ผ่าน)
+    const flagIcon = document.getElementById('flagIcon');
+    const flagCard = document.getElementById('flagCard');
+    if (row.percentFlag >= 80) {
+        flagIcon.className = "fas fa-check";
+        flagCard.className = "card-detail card-blue"; // สีฟ้า/เขียว
+    } else {
+        flagIcon.className = "fas fa-times";
+        flagCard.className = "card-detail card-red"; // สีแดง
+    }
+
+    // --- การ์ดขวา: กิจกรรม ---
+    document.getElementById('deptTotal').textContent = `${row.deptTotal} ครั้ง`;
+    document.getElementById('deptAttended').textContent = `${row.deptAttended} ครั้ง`;
+    document.getElementById('deptPercent').textContent = `${row.percentActivity}%`;
+
+    const deptIcon = document.getElementById('deptIcon');
+    const deptCard = document.getElementById('deptCard');
+    if (row.percentActivity >= 80) {
+        deptIcon.className = "fas fa-check";
+        deptCard.className = "card-detail card-blue";
+    } else {
+        deptIcon.className = "fas fa-times";
+        deptCard.className = "card-detail card-red";
+    }
+
+    // แสดง Modal
+    document.getElementById('studentModal').style.display = 'flex';
+}
+
+// ฟังก์ชันปิด Popup
+function closeStudentModal() {
+    document.getElementById('studentModal').style.display = 'none';
+}
+
+// ปิดเมื่อคลิกพื้นหลัง
+window.onclick = function(event) {
+    const modal = document.getElementById('studentModal');
+    if (event.target == modal) {
+        closeStudentModal();
+    }
+}
+
 document.addEventListener("DOMContentLoaded", async () => {
     await fetchTermScore();
 });
