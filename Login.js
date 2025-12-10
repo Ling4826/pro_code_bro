@@ -70,13 +70,12 @@ loginForm.addEventListener('submit', async (event) => {
         if (roleCheck === 'admin') {
             window.location.href = 'Admin/Home.html';
         } else if (roleCheck === 'teacher') {
-            window.location.href = 'Professor_Assistant.html';
+            window.location.href = 'Teacher/Home.html';
         } else if (roleCheck === 'leader') {
-            // 🟡 หัวหน้าห้อง
-            window.location.href = 'Term_results_summary.html'; 
+            window.location.href = 'Leader/Home.html'; 
         } else { 
             // 🟢 นักเรียนทั่วไป
-            window.location.href = 'Term_results_summary.html';
+            window.location.href = 'Student/Home.html';
         }
 
     } catch (err) {
