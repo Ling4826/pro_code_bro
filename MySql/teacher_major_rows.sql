@@ -1,0 +1,1 @@
+INSERT INTO "public"."teacher_major" ("teacher_id", "major_id") VALUES ('1', '1'), ('1', '2'), ('2', '6'), ('3', '14'), ('3', '23'), ('4', '25');
