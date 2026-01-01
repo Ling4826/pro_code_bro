@@ -1,233 +1,264 @@
-// Activity_list.js
+// ไฟล์: JavaScript/Activity_list.js
 
-// ❌ ไม่ต้องใช้ Supabase Config แล้ว
-// const SUPABASE_URL = ... (ลบทิ้ง)
-// const SUPABASE_ANON_KEY = ... (ลบทิ้ง)
-// const supabaseClient = ... (ลบทิ้ง)
+const CONFIG = {
+    // ใช้ PHP ตัวเดิมที่คุ้นเคย
+    API_URL: 'PHP/api_activity_list.php', 
+    API_MASTER: 'PHP/Create_activities.php', 
+    API_ACTION: 'PHP/api_activity_actions.php' 
+};
 
-let cachedActivities = [];
+let allMajors = [];
+let activityToDeleteId = null;
 
-// ==========================================================
-// === 1. FETCH & RENDER ACTIVITY ===
-// ==========================================================
-
-async function fetchActivities() {
-    const container = document.getElementById('activityCardContainer');
-    container.innerHTML = '<div style="text-align:center; padding:20px;">กำลังโหลดกิจกรรม...</div>';
+// ==========================================
+// 1. INIT
+// ==========================================
+document.addEventListener("DOMContentLoaded", async () => {
+    // 1.1 โหลดตัวเลือก (Dropdown) - โหลดไว้เฉยๆ เผื่อเป็นอาจารย์ใช้
+    await fetchMasterData();
     
-    // ดึง Ref ID (รหัสนักเรียน/อาจารย์) จาก Session
-    const refId = sessionStorage.getItem('ref_id');
+    // 1.2 ผูก Event ให้ตัวกรอง
+    setupFilterEvents();
     
+    // 1.3 โหลดรายการกิจกรรม
+    fetchActivities();
+});
+
+// ==========================================
+// 2. DROPDOWN LOGIC (เหมือนเดิม)
+// ==========================================
+async function fetchMasterData() {
     try {
-        // ✅ เปลี่ยนมาใช้ fetch ไปที่ไฟล์ PHP แทน
-        // ส่ง student_id ไปด้วย เพื่อให้ PHP รู้ว่าใครล็อกอิน (เผื่ออนาคตใช้กรอง)
-        const response = await fetch(`PHP/api_get_activities.php?student_id=${refId}`);
-
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+        const res = await fetch(`${CONFIG.API_MASTER}?action=get_majors`);
+        if (!res.ok) return; // เงียบไว้ถ้าโหลดไม่ได้
+        const result = await res.json();
+        if (result.status === 'success') {
+            allMajors = result.data;
+            populateLevelDropdown();
         }
-
-        const activities = await response.json();
-
-        // ตรวจสอบว่า PHP ส่ง error กลับมาไหม
-        if (activities.status === 'error') {
-            throw new Error(activities.message);
-        }
-
-        cachedActivities = activities;
-        
-        initFilters(); // เริ่มต้นตัวกรอง
-        updateFilters(); // แสดงผล
-        
-    } catch (error) {
-        console.error('Error fetching activities:', error);
-        container.innerHTML = `<p style="text-align:center; color:red;">ไม่สามารถดึงรายการกิจกรรมได้<br>(${error.message})</p>`;
+    } catch (err) {
+        console.error("Error fetching majors:", err);
     }
 }
 
-function RenderActivityCards(activities, container) {
+function populateLevelDropdown() {
+    const levelSelect = document.getElementById('level');
+    if(!levelSelect) return;
+    const levels = [...new Set(allMajors.map(m => m.level))].sort();
+    levelSelect.innerHTML = '<option value="">ทุกระดับ</option>';
+    levels.forEach(lvl => levelSelect.innerHTML += `<option value="${lvl}">${lvl}</option>`);
+    levelSelect.disabled = false;
+}
+
+function handleLevelChange() {
+    const selectedLevel = document.getElementById('level').value;
+    const deptSelect = document.getElementById('department');
+    deptSelect.innerHTML = '<option value="">ทุกสาขาวิชา</option>';
+    
+    if (selectedLevel) {
+        const filteredMajors = allMajors.filter(m => m.level === selectedLevel);
+        filteredMajors.forEach(m => deptSelect.innerHTML += `<option value="${m.id}">${m.name}</option>`);
+        deptSelect.disabled = false;
+    } else {
+        deptSelect.disabled = true;
+    }
+    resetClassDropdowns();
+    fetchActivities(); 
+}
+
+function resetClassDropdowns() {
+    document.getElementById('studentYear').innerHTML = '<option value="">ทุกชั้นปี</option>';
+    document.getElementById('classNumber').innerHTML = '<option value="">ทุกห้อง</option>';
+    document.getElementById('studentYear').disabled = true;
+    document.getElementById('classNumber').disabled = true;
+}
+
+async function fetchClassesForDropdown() {
+    const level = document.getElementById('level').value;
+    const majorId = document.getElementById('department').value;
+    if (!level || !majorId) { fetchActivities(); return; }
+
+    try {
+        const params = new URLSearchParams({ action: 'get_classes', level, majorId });
+        const res = await fetch(`${CONFIG.API_MASTER}?${params}`);
+        const result = await res.json();
+        if (result.status === 'success') populateYearAndRoom(result.data);
+    } catch (err) { console.error(err); }
+    fetchActivities();
+}
+
+function populateYearAndRoom(classes) {
+    const yearSelect = document.getElementById('studentYear');
+    const roomSelect = document.getElementById('classNumber');
+    
+    const years = [...new Set(classes.map(c => c.year))].sort((a,b) => a-b);
+    const rooms = [...new Set(classes.map(c => c.class_number))].sort((a,b) => a-b);
+
+    yearSelect.innerHTML = '<option value="">ทุกชั้นปี</option>';
+    years.forEach(y => yearSelect.innerHTML += `<option value="${y}">ปี ${y}</option>`);
+    roomSelect.innerHTML = '<option value="">ทุกห้อง</option>';
+    rooms.forEach(r => roomSelect.innerHTML += `<option value="${r}">ห้อง ${r}</option>`);
+    yearSelect.disabled = false;
+    roomSelect.disabled = false;
+}
+
+function setupFilterEvents() {
+    document.getElementById('level')?.addEventListener('change', handleLevelChange);
+    document.getElementById('department')?.addEventListener('change', fetchClassesForDropdown);
+    document.getElementById('studentYear')?.addEventListener('change', fetchActivities);
+    document.getElementById('classNumber')?.addEventListener('change', fetchActivities);
+    
+    let timeout;
+    document.getElementById('activityNameInput')?.addEventListener('input', () => {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => fetchActivities(), 500);
+    });
+}
+
+// ==========================================
+// 3. FETCH ACTIVITIES (หัวใจหลัก)
+// ==========================================
+async function fetchActivities() {
+    const container = document.getElementById('activityCardContainer');
+    container.innerHTML = '<p style="width:100%; text-align:center; color:#666;">กำลังโหลดข้อมูล...</p>';
+
+    // ดึงรหัสนักเรียนจาก Session
+    const studentId = sessionStorage.getItem('ref_id');
+
+    // เตรียมค่าส่งไป PHP
+    const params = new URLSearchParams({
+        search: document.getElementById('activityNameInput')?.value || '',
+        level: document.getElementById('level')?.value || '',
+        major_id: document.getElementById('department')?.value || '',
+        class_year: document.getElementById('studentYear')?.value || '',
+        class_room: document.getElementById('classNumber')?.value || ''
+    });
+
+    // ถ้ามี student_id ให้แนบไปด้วย (PHP จะใช้ตัวนี้กรองเป็นหลัก)
+    if (studentId) {
+        params.append('student_id', studentId);
+        
+        // (Optional) ถ้าเป็นนักเรียน อาจจะปิด Dropdown อื่นๆ เพื่อไม่ให้งง
+        // disableFiltersForStudent(); 
+    }
+
+    try {
+        const response = await fetch(`${CONFIG.API_URL}?${params}`);
+        
+        if (!response.ok) throw new Error(`HTTP Error: ${response.status}`);
+        
+        const result = await response.json();
+
+        if (result.status === 'success') {
+            renderActivities(result.data);
+        } else {
+            container.innerHTML = `<p style="color:red; text-align:center;">เกิดข้อผิดพลาด: ${result.message}</p>`;
+        }
+    } catch (error) {
+        console.error("Error loading activities:", error);
+        container.innerHTML = `<p style="color:red; text-align:center;">ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้</p>`;
+    }
+}
+
+function renderActivities(activities) {
+    const container = document.getElementById('activityCardContainer');
     container.innerHTML = '';
 
     if (activities.length === 0) {
-        container.innerHTML = '<p style="text-align:center; width:100%; color:#666;">ไม่พบรายการกิจกรรม</p>';
+        container.innerHTML = '<p style="width:100%; text-align:center; padding:20px; color:#999;">ไม่พบกิจกรรม</p>';
         return;
     }
-    
-    const DEFAULT_MAJOR = 'ทุกสาขา';
-    const DEFAULT_LEVEL = 'ทุกระดับ';
-    const DEFAULT_YEAR = 'ทุกปี';
-    const DEFAULT_CLASS_NUM = 'ทุกห้อง';
-    const ALL_CLASSES = 'ทุกชั้นเรียน'; 
 
-    activities.forEach(activity => {
-        // แปลงวันที่
-        const date = new Date(activity.start_time).toLocaleDateString('th-TH', { 
-            day: '2-digit', 
-            month: '2-digit', 
-            year: 'numeric' 
-        }).replace(/\//g, '/');
+    activities.forEach(act => {
+        const card = document.createElement('div');
+        card.className = 'activity-card';
         
-        // แปลงเวลา
-        const startTime = new Date(activity.start_time).toLocaleTimeString('th-TH', { 
-            hour: '2-digit', 
-            minute: '2-digit', 
-            timeZone: 'Asia/Bangkok' 
-        });
+        // แปลงวันที่และเวลา
+        const dateObj = new Date(act.start_time);
+        const dateStr = dateObj.toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' });
+        const timeStr = dateObj.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
         
-        const endTime = new Date(activity.end_time).toLocaleTimeString('th-TH', { 
-            hour: '2-digit', 
-            minute: '2-digit', 
-            timeZone: 'Asia/Bangkok' 
-        });
-        
-        // ดึงข้อมูล Class และ Major (จาก JSON ที่ PHP จัด format มาให้)
-        const classData = activity.class;
-        const majorData = classData?.major;
-        
-        let classDetailText;
-        if (classData && classData.id) {
-            classDetailText = `ปี ${classData.year || DEFAULT_YEAR} ห้อง ${classData.class_number || DEFAULT_CLASS_NUM}`;
-        } else {
-            classDetailText = ALL_CLASSES;
+        // แสดงข้อมูลห้องเรียน
+        let classInfo = '<span style="background:rgba(255,255,255,0.2); padding:2px 8px; border-radius:4px; font-size:12px;">กิจกรรมส่วนกลาง</span>';
+        if (act.class_id) {
+            classInfo = `${act.major_level || ''} ${act.major_name || ''} ปี ${act.year || ''} ห้อง ${act.class_number || ''}`;
         }
 
-        const departmentName = majorData?.name || DEFAULT_MAJOR;
-        const departmentLevel = majorData?.level || DEFAULT_LEVEL;
+        const typeLabel = act.activity_type === 'flag_ceremony' ? 'หน้าเสาธง' : 'กิจกรรมทั่วไป';
+
+        // เช็คสิทธิ์ (ถ้านักเรียนดู ไม่ให้มีปุ่มลบ/แก้ไข)
+        // (ใช้การเช็คแบบง่ายๆ ว่าถ้ามี student_id ใน session ให้ซ่อนปุ่ม)
+        const isStudent = sessionStorage.getItem('ref_id'); 
+        let actionButtons = '';
         
-        // จำลองเลขเทอม (หรือจะดึงจาก DB ก็ได้ถ้ามี field นี้)
-        const mockSemester = (activity.id % 2) + 1;
-        const recurringDays = activity.is_recurring ? 'N' : '0';
+        if (!isStudent) { // ถ้าเป็นอาจารย์/แอดมิน ให้โชว์ปุ่ม
+             actionButtons = `
+                <div class="card-actions">
+                    <i class="fas fa-pen" onclick="editActivity('${act.id}', event)" title="แก้ไข"></i>
+                    <i class="fas fa-trash-alt" onclick="confirmDelete('${act.id}', '${act.name}', event)" title="ลบ"></i>
+                </div>`;
+        }
 
-        const cardHTML = `
-            <div class="activity-card" 
-                data-id="${activity.id}" 
-                data-name="${activity.name}" 
-                > 
-                <div class="card-title">${activity.name}</div>
-                
-                <div class="card-detail">วันที่ ${date}</div>
-                <div class="card-detail">เวลา ${startTime} น. - ${endTime} น.</div>
-                
-                <div class="card-detail">สาขา: ${departmentName}</div>
-                <div class="card-detail">ระดับ: ${departmentLevel}</div>
-                <div class="card-detail">ชั้นเรียน: ${classDetailText}</div> 
-                <div class="card-detail">จัดขึ้นทุก ${recurringDays} วัน</div>
-                <div class="card-detail">เทอม: ${mockSemester}</div>
+        card.innerHTML = `
+            <div style="flex-grow: 1;" onclick="viewActivity('${act.id}')">
+                <h3 style="margin: 0 0 10px 0; font-size: 1.2rem;">${act.name}</h3>
+                <p style="margin: 5px 0; font-size: 0.9rem; opacity: 0.9;">
+                    <i class="far fa-calendar-alt"></i> ${dateStr}
+                </p>
+                <p style="margin: 5px 0; font-size: 0.9rem; opacity: 0.9;">
+                    <i class="far fa-clock"></i> ${timeStr}
+                </p>
+                <p style="margin: 5px 0; font-size: 0.9rem;">
+                    <i class="fas fa-tag"></i> ${typeLabel}
+                </p>
+                <div style="margin-top: 10px; font-size: 0.85rem; opacity: 0.8;">
+                    <i class="fas fa-users"></i> ${classInfo}
+                </div>
             </div>
+            ${actionButtons}
         `;
-        container.innerHTML += cardHTML;
-    });
-
-    attachCardEventListeners();
-}
-
-// ==========================================================
-// === 2. CARD EVENT LISTENERS ===
-// ==========================================================
-
-function attachCardEventListeners() {
-    document.querySelectorAll('.activity-card').forEach(card => {
-        card.addEventListener('click', (event) => {
-            if (event.target.classList.contains('fas')) {
-                return;
-            }
-            // ไปหน้า Check_activities (เช็คชื่อ)
-            const activityId = card.dataset.id;
-            window.location.href = `Check_activities.html?activityId=${activityId}`;
-        });
+        container.appendChild(card);
     });
 }
 
-// ==========================================================
-// === 3. FILTER LOGIC (Logic เดิม ใช้ได้เลย) ===
-// ==========================================================
-
-let currentFilters = {
-    level: '',
-    major: '',
-    year: '',
-    classNumber: '',
-    search: ''
+// ... (ฟังก์ชัน viewActivity, editActivity, confirmDelete, cancelDelete เหมือนเดิม) ...
+window.viewActivity = function(id) {
+    window.location.href = `Check_activities.html?activityId=${id}`;
 };
 
-function getFilteredActivities(activities) {
-    let filtered = [...activities];
-    const { level, major, year, classNumber, search } = currentFilters;
+window.editActivity = function(id, event) {
+    event.stopPropagation();
+    window.location.href = `Edit_activity.html?activityId=${id}`;
+};
 
-    if (level) {
-        filtered = filtered.filter(a => a.class?.major?.level === level);
+window.confirmDelete = function(id, name, event) {
+    event.stopPropagation();
+    activityToDeleteId = id;
+    document.getElementById('activityToDeleteName').textContent = name;
+    document.getElementById('confirmDialog').style.display = 'flex';
+};
+
+document.getElementById('cancelDelete').addEventListener('click', () => {
+    document.getElementById('confirmDialog').style.display = 'none';
+    activityToDeleteId = null;
+});
+
+document.getElementById('confirmDelete').addEventListener('click', async () => {
+    if (!activityToDeleteId) return;
+    try {
+        const res = await fetch(CONFIG.API_ACTION, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'delete', id: activityToDeleteId })
+        });
+        const result = await res.json();
+        if (result.status === 'success') {
+            document.getElementById('confirmDialog').style.display = 'none';
+            fetchActivities();
+        } else {
+            alert('เกิดข้อผิดพลาด: ' + result.message);
+        }
+    } catch (err) {
+        alert('เชื่อมต่อเซิร์ฟเวอร์ไม่ได้');
     }
-    if (major) {
-        filtered = filtered.filter(a => a.class?.major?.name === major);
-    }
-    if (year) {
-        // แปลงเป็น String ก่อนเทียบ เพื่อความชัวร์
-        filtered = filtered.filter(a => (a.class?.year + "") === year || a.class === null); 
-    }
-    if (classNumber) {
-        filtered = filtered.filter(a => (a.class?.class_number + "") === classNumber || a.class === null);
-    }
-    if (search) {
-        const searchTerm = search.toLowerCase();
-        filtered = filtered.filter(a => 
-            a.name.toLowerCase().includes(searchTerm) ||
-            (a.class?.major?.name || "").toLowerCase().includes(searchTerm) ||
-            (a.class?.major?.level || "").toLowerCase().includes(searchTerm)
-        );
-    }
-    return filtered;
-}
-
-function initFilters() {
-    const activities = cachedActivities;
-    
-    // ดึงค่าที่ไม่ซ้ำกัน
-    const uniqueMajors = [...new Set(activities.map(a => a.class?.major?.name).filter(n => n))].sort();
-    const uniqueLevels = [...new Set(activities.map(a => a.class?.major?.level).filter(n => n))].sort();
-    const uniqueYears = [...new Set(activities.map(a => a.class?.year).filter(n => n))].sort((a, b) => a - b);
-    const uniqueClasses = [...new Set(activities.map(a => a.class?.class_number).filter(n => n))].sort((a, b) => a - b);
-    
-    // เติมค่าลงใน Dropdown
-    fillSelect('level', uniqueLevels, 'ทุกระดับ');
-    fillSelect('department', uniqueMajors, 'ทุกสาขาวิชา');
-    fillSelect('studentYear', uniqueYears, 'ทุกชั้นปี', 'ปี ');
-    fillSelect('classNumber', uniqueClasses, 'ทุกห้อง', 'ห้อง ');
-    
-    // ตั้งค่า Event Listeners
-    document.getElementById('level')?.addEventListener('change', updateFilters);
-    document.getElementById('department')?.addEventListener('change', updateFilters);
-    document.getElementById('studentYear')?.addEventListener('change', updateFilters);
-    document.getElementById('classNumber')?.addEventListener('change', updateFilters);
-    document.getElementById('activityNameInput')?.addEventListener('input', updateFilters);
-}
-
-function fillSelect(elementId, items, placeholder, prefix = "") {
-    const select = document.getElementById(elementId);
-    if (!select) return;
-    select.innerHTML = `<option value="">${placeholder}</option>`;
-    items.forEach(item => {
-        const option = document.createElement("option");
-        option.value = item;
-        option.textContent = prefix + item;
-        select.appendChild(option);
-    });
-}
-
-function updateFilters() {
-    currentFilters.level = document.getElementById('level')?.value || '';
-    currentFilters.major = document.getElementById('department')?.value || '';
-    currentFilters.year = document.getElementById('studentYear')?.value || '';
-    currentFilters.classNumber = document.getElementById('classNumber')?.value || '';
-    currentFilters.search = document.getElementById('activityNameInput')?.value || '';
-    
-    const filtered = getFilteredActivities(cachedActivities);
-    RenderActivityCards(filtered, document.getElementById('activityCardContainer'));
-}
-
-// ==========================================================
-// === 4. INITIALIZATION ===
-// ==========================================================
-
-document.addEventListener('DOMContentLoaded', () => {
-    fetchActivities();
 });

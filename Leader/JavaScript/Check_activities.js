@@ -1,257 +1,305 @@
-/* ====== CONFIG ====== */
-// ไม่ต้องใช้ Supabase Config แล้ว
+// Check_activities.js
+
+const CONFIG = {
+    API_URL: 'PHP/api_check_activity.php'
+};
+
 const params = new URLSearchParams(window.location.search);
 const activityId = params.get('activityId');
 
-/* ====== HELPERS ====== */
-const $ = sel => document.querySelector(sel);
-let globalIsoDate = null;
-let globalSemester = null;
-let globalAcademicYear = null;
+let currentActivityData = {}; // เก็บข้อมูลเดิมไว้เทียบ
 
-function setValue(id, value) {
-    const el = document.getElementById(id);
-    if (!el) return;
-    el.value = value ?? '';
-}
-
-// แปลงวันที่จาก "2025-06-15 08:00:00" เป็น "08:00"
-function formatTimeFromSQL(datetimeStr) {
-    if (!datetimeStr) return '';
-    const dateObj = new Date(datetimeStr); // Browser มักจะอ่าน format นี้ได้
-    if (isNaN(dateObj.getTime())) return ''; // กันเหนียว
-
-    const hours = String(dateObj.getHours()).padStart(2, '0');
-    const minutes = String(dateObj.getMinutes()).padStart(2, '0');
-    return `${hours}:${minutes}`;
-}
-
-// ตั้งค่า Dropdown แบบชั่วคราว (เพราะฟอร์ม Disabled อยู่แล้ว แค่สร้าง option เดียวให้โชว์ได้ก็พอ)
-function setSingleOption(selectId, value, text) {
-    const select = document.getElementById(selectId);
-    if (!select) return;
-    select.innerHTML = ''; // ล้างของเก่า
-    const option = document.createElement('option');
-    option.value = value;
-    option.textContent = text;
-    option.selected = true;
-    select.appendChild(option);
-}
-
-// Logic กด Radio แล้วเด้งออก (Toggle Uncheck)
-function attachRadioToggleBehavior(container = document) {
-    container.querySelectorAll('input[type="radio"]').forEach(radio => {
-        if (radio.dataset.listenerAttached === "true") return;
-        radio.addEventListener('click', function (event) {
-            if (this.dataset.waschecked === "true") {
-                event.preventDefault();
-                const that = this;
-                setTimeout(() => {
-                    that.checked = false;
-                    that.dataset.waschecked = "false";
-                }, 0);
-            } else {
-                const group = container.querySelectorAll(`input[name="${this.name}"]`);
-                group.forEach(r => r.dataset.waschecked = "false");
-                this.dataset.waschecked = "true";
-            }
-        });
-        radio.dataset.listenerAttached = "true";
-    });
-}
-
-/* ====== MAIN LOADER ====== */
-async function loadActivityData() {
+// ==========================================
+// 1. INIT & LOAD
+// ==========================================
+document.addEventListener('DOMContentLoaded', async () => {
+    injectTableStyles();
     if (!activityId) {
         alert('ไม่พบรหัสกิจกรรม (Activity ID)');
+        window.location.href = 'Activity_list.html';
         return;
     }
 
+    await loadActivityData();
+    setupEventListeners();
+});
+
+async function loadActivityData() {
     try {
-        // 1. เรียก API PHP เพื่อดึงข้อมูลกิจกรรม + รายชื่อเช็คชื่อ
-        const response = await fetch(`PHP/api_get_activity_detail.php?id=${activityId}`);
+        const response = await fetch(`${CONFIG.API_URL}?activity_id=${activityId}`);
+        if (!response.ok) throw new Error('Network response was not ok');
+        
         const data = await response.json();
-
-        if (data.status === 'error') {
-            throw new Error(data.message);
-        }
-
-        const activity = data.activity;
-        const checks = data.checks;
-
-        // 2. เก็บค่าตัวแปร Global สำหรับใช้ตอนบันทึก
-        // ใช้ Date จาก Check record แรก (ถ้ามี) หรือจาก Activity start_time
-        let refDateStr = activity.start_time;
-        let refSemester = "1"; // Default
         
-        // ถ้าเคยมีการเช็คชื่อแล้ว ให้ยึดวันที่/เทอม จาก record การเช็คชื่อล่าสุด
-        if (checks.length > 0 && checks[0].date) {
-            refDateStr = checks[0].date; // Format: YYYY-MM-DD
-            refSemester = checks[0].semester;
-            globalAcademicYear = checks[0].academic_year;
+        // ตรวจสอบว่ามี status error หรือไม่
+        if (data.status === 'error') throw new Error(data.message);
+
+        // 1. Render Header (รายละเอียดกิจกรรม)
+        if (data.activity) {
+            renderActivityHeader(data.activity);
+            // เก็บข้อมูลไว้ใช้ตอน Save
+            currentActivityData = data.activity;
         }
 
-        const dateObj = new Date(refDateStr);
-        globalIsoDate = dateObj.toISOString().split('T')[0]; // เก็บ YYYY-MM-DD
-        globalSemester = refSemester;
-        if (!globalAcademicYear) globalAcademicYear = (dateObj.getFullYear() + 543).toString();
-
-        // 3. แสดงข้อมูลลงใน Form
-        setValue('activityName', activity.name);
-        setValue('activityType', activity.activity_type);
-        setValue('recurringDays', activity.is_recurring ? 1 : 0);
-        setValue('semester', globalSemester);
-
-        // ตั้งค่า Dropdown ต่างๆ (สร้าง Option ปลอมๆ ขึ้นมาเพื่อให้โชว์ข้อมูลได้)
-        const classInfo = activity.class || {};
-        const majorInfo = classInfo.major || {};
-
-        if (majorInfo.level) setSingleOption('level', majorInfo.level, majorInfo.level);
-        if (majorInfo.name) setSingleOption('department', majorInfo.id, majorInfo.name);
-        if (classInfo.year) setSingleOption('studentYear', classInfo.year, classInfo.year);
-        
-        const className = classInfo.class_number ? `ห้อง ${classInfo.class_number}` : 'ทุกห้อง';
-        setSingleOption('studentClass', classInfo.id || '', className);
-
-        // 4. ตั้งค่า Flatpickr (Date/Time)
-        if (window.flatpickr) {
-            // วันที่
-            flatpickr("#activityDate", {
-                dateFormat: "d/m/Y",
-                locale: "th",
-                defaultDate: dateObj,
-                disabled: true
-            });
-
-            // เวลาเริ่ม
-            flatpickr("#startTime", {
-                enableTime: true,
-                noCalendar: true,
-                time_24hr: true,
-                dateFormat: "H:i",
-                altInput: true,
-                altFormat: "H:i น.",
-                defaultDate: formatTimeFromSQL(activity.start_time),
-                disabled: true
-            });
-
-            // เวลาสิ้นสุด
-            flatpickr("#endTime", {
-                enableTime: true,
-                noCalendar: true,
-                time_24hr: true,
-                dateFormat: "H:i",
-                altInput: true,
-                altFormat: "H:i น.",
-                defaultDate: formatTimeFromSQL(activity.end_time),
-                disabled: true
-            });
+        // 2. Render Table (รายชื่อนักเรียน)
+        // เพิ่มการเช็คว่ามีข้อมูลนักเรียนหรือไม่
+        if (data.students && Array.isArray(data.students)) {
+            renderAttendanceTable(data.students);
+        } else {
+            console.warn('No student data found');
         }
 
-        // 5. สร้างตารางรายชื่อ (Render Table)
-        const tableBody = document.querySelector('.attendance-table tbody');
-        tableBody.innerHTML = '';
-
-        const statusMap = { 'Attended': 'present', 'Absent': 'absent', 'Excused': 'late' };
-
-        checks.forEach(record => {
-            const tr = document.createElement('tr');
-            tr.dataset.recordId = record.id; // เก็บ ID ของ activity_check ไว้
-            
-            const studentName = record.student_name || '-';
-            const studentId = record.student_id || '-';
-            const currentStatus = statusMap[record.status] || '';
-            const radioName = `status_${record.id}`;
-
-            tr.innerHTML = `
-                <td style="text-align:left; padding-left:10px">${studentName}</td>
-                <td>${studentId}</td>
-                <td>
-                    <input type="radio" name="${radioName}" id="present_${record.id}" value="present" ${currentStatus === 'present' ? 'checked' : ''}>
-                    <label for="present_${record.id}" class="present-btn"></label>
-                </td>
-                <td>
-                    <input type="radio" name="${radioName}" id="absent_${record.id}" value="absent" ${currentStatus === 'absent' ? 'checked' : ''}>
-                    <label for="absent_${record.id}" class="absent-btn"></label>
-                </td>
-            `;
-            tableBody.appendChild(tr);
-        });
-
-        attachRadioToggleBehavior(tableBody);
-
-    } catch (err) {
-        console.error('Error loading data:', err);
-        alert('เกิดข้อผิดพลาด: ' + err.message);
+    } catch (error) {
+        console.error('Error loading data:', error);
+        alert('เกิดข้อผิดพลาดในการโหลดข้อมูล: ' + error.message);
     }
 }
 
-/* ====== INIT & SUBMIT ====== */
-document.addEventListener('DOMContentLoaded', async () => {
-    // โหลดข้อมูลทันทีเมื่อเปิดหน้า
-    await loadActivityData();
-
-    // จัดการการกดปุ่มบันทึก
-    const form = document.getElementById('createActivityForm');
-    if (form) {
-        form.addEventListener('submit', async (e) => {
-            e.preventDefault();
-
-            try {
-                // 1. รวบรวมข้อมูลจากตาราง
-                const rows = document.querySelectorAll('.attendance-table tbody tr');
-                const recordsToUpdate = [];
-                const statusMapDB = { 'present': 'Attended', 'absent': 'Absent', 'late': 'Excused' };
-
-                rows.forEach(row => {
-                    const recordId = row.dataset.recordId;
-                    const checkedRadio = row.querySelector('input[type="radio"]:checked');
-                    
-                    // แปลงค่าจาก radio (present/absent) เป็นค่า DB (Attended/Absent)
-                    // ถ้าไม่ได้ติ๊กอะไรเลย ให้เป็น null (หรือจะตั้ง Default ก็ได้)
-                    let statusValue = null;
-                    if (checkedRadio) {
-                        statusValue = statusMapDB[checkedRadio.value];
-                    }
-
-                    if (recordId) {
-                        recordsToUpdate.push({
-                            id: recordId,
-                            status: statusValue
-                        });
-                    }
-                });
-
-                if (recordsToUpdate.length === 0) {
-                    alert('ไม่พบรายชื่อนักเรียน');
-                    return;
-                }
-
-                // 2. ส่งข้อมูลไปที่ PHP
-                const response = await fetch('PHP/api_save_attendance.php', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        date: globalIsoDate,
-                        semester: globalSemester,
-                        academic_year: globalAcademicYear,
-                        records: recordsToUpdate
-                    })
-                });
-
-                const result = await response.json();
-
-                if (result.status === 'success') {
-                    alert('บันทึกการเข้าเรียนเรียบร้อยแล้ว!');
-                    window.location.href = 'Activity_list.html';
-                } else {
-                    throw new Error(result.message || 'Unknown error');
-                }
-
-            } catch (err) {
-                console.error('Submit error:', err);
-                alert('เกิดข้อผิดพลาดในการบันทึก: ' + err.message);
-            }
-        });
+// ==========================================
+// 2. RENDER FUNCTIONS
+// ==========================================
+function renderActivityHeader(activity) {
+    // ใส่ค่าลง Input
+    setValue('activityName', activity.name);
+    setValue('activityType', activity.activity_type);
+    setValue('semester', '1'); // Default หรือดึงจาก DB
+    setValue('recurringDays', activity.is_recurring ? 1 : 0);
+    
+    // --- จุดที่แก้ไข: ตรวจสอบว่ามี element id="classInfoDisplay" หรือไม่ก่อนใส่ค่า ---
+    const classInfoEl = document.getElementById('classInfoDisplay');
+    if (classInfoEl) {
+        const classInfo = `ระดับ ${activity.major_level || '-'} ${activity.major_name || '-'} ปี ${activity.year || '-'} ห้อง ${activity.class_number || '-'}`;
+        classInfoEl.textContent = classInfo;
     }
-});
+
+    // เรียกใช้ฟังก์ชันจัดการวันที่
+    setupFlatpickr(activity.start_time, activity.end_time);
+}
+function renderAttendanceTable(students) {
+    const tbody = document.querySelector('.attendance-table tbody');
+    if (!tbody) return;
+
+    tbody.innerHTML = '';
+
+    const statusMap = { 'Attended': 'present', 'Absent': 'absent' };
+
+    // *** จุดสำคัญ: ต้องมี (student, index) ***
+    students.forEach((student, index) => {
+        const tr = document.createElement('tr');
+        tr.dataset.checkId = student.check_id;
+        
+        // ใส่สีพื้นหลัง: บรรทัดคู่สีขาว, บรรทัดคี่สีเทาอ่อน
+        tr.style.backgroundColor = index % 2 === 0 ? '#ffffff' : '#f9f9f9';
+
+        const uiStatus = statusMap[student.status] || ''; 
+        const groupName = `status_${student.check_id}`; 
+
+        tr.innerHTML = `
+            <td style="text-align:left; padding-left:15px; color:#333;">${student.student_name}</td>
+            <td style="text-align:center; color:#333;">${student.student_id}</td>
+            
+            <td class="status-col" style="text-align:center;">
+                <input type="checkbox" name="${groupName}" value="Attended" 
+                       ${uiStatus === 'present' ? 'checked' : ''} 
+                       class="status-checkbox present" onclick="onlyOne(this)">
+            </td>
+            
+            <td class="status-col" style="text-align:center;">
+                <input type="checkbox" name="${groupName}" value="Absent" 
+                       ${uiStatus === 'absent' ? 'checked' : ''} 
+                       class="status-checkbox absent" onclick="onlyOne(this)">
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+// ฟังก์ชันบังคับเลือกได้แค่อันเดียว
+window.onlyOne = function(checkbox) {
+    const checkboxes = document.getElementsByName(checkbox.name);
+    checkboxes.forEach((item) => {
+        if (item !== checkbox) item.checked = false;
+    });
+}
+
+function setupFlatpickr(startIso, endIso) {
+    if (!window.flatpickr) return;
+
+    // แปลงวันที่จาก string เป็น Date Object เพื่อป้องกัน Error ในบาง Browser
+    const startDateObj = startIso ? new Date(startIso.replace(' ', 'T')) : new Date();
+    const endDateObj = endIso ? new Date(endIso.replace(' ', 'T')) : new Date();
+
+    // Date Picker
+    flatpickr("#activityDate", {
+        dateFormat: "d/m/Y",
+        defaultDate: startDateObj,
+        locale: "th"
+    });
+
+    // Time Pickers
+    const timeConfig = {
+        enableTime: true,
+        noCalendar: true,
+        dateFormat: "H:i",
+        time_24hr: true,
+        locale: "th"
+    };
+
+    flatpickr("#startTime", { ...timeConfig, defaultDate: startDateObj });
+    flatpickr("#endTime", { ...timeConfig, defaultDate: endDateObj });
+}
+
+// ==========================================
+// 3. SAVE LOGIC (BULK SAVE)
+// ==========================================
+async function handleSave(e) {
+    e.preventDefault();
+
+    // 3.1 เตรียมข้อมูล Header
+    const dateStr = document.getElementById('activityDate').value; 
+    const isoDate = convertDateToISO(dateStr); 
+    
+    const startTimeVal = document.getElementById('startTime').value;
+    const endTimeVal = document.getElementById('endTime').value;
+
+    const payload = {
+        activityId: activityId,
+        activityData: {
+            name: document.getElementById('activityName').value,
+            activity_type: document.getElementById('activityType').value,
+            start_time: `${isoDate} ${startTimeVal}:00`,
+            end_time: `${isoDate} ${endTimeVal}:00`,
+            is_recurring: document.getElementById('recurringDays').value,
+            semester: document.getElementById('semester').value || 1,
+            academic_year: new Date(isoDate).getFullYear() + 543, 
+            current_date: isoDate
+        },
+        attendanceData: []
+    };
+
+    // 3.2 เตรียมข้อมูล Table
+    const rows = document.querySelectorAll('.attendance-table tbody tr');
+    rows.forEach(row => {
+        const checkId = row.dataset.checkId;
+        const checkedRadio = row.querySelector(`input[name="status_${checkId}"]:checked`);
+        
+        const status = checkedRadio ? checkedRadio.value : null;
+
+        payload.attendanceData.push({
+            check_id: checkId,
+            status: status
+        });
+    });
+
+    // 3.3 ส่งไป PHP
+    try {
+        const res = await fetch(CONFIG.API_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        const result = await res.json();
+        if (result.status === 'success') {
+            alert('บันทึกข้อมูลเรียบร้อยแล้ว!');
+            window.location.href = 'Activity_list.html'; 
+        } else {
+            throw new Error(result.message);
+        }
+
+    } catch (err) {
+        console.error('Save error:', err);
+        alert('เกิดข้อผิดพลาดในการบันทึก: ' + err.message);
+    }
+}
+
+// ==========================================
+// 4. UTILS
+// ==========================================
+function setValue(id, val) {
+    const el = document.getElementById(id);
+    if(el) el.value = val;
+}
+
+function convertDateToISO(displayDate) {
+    if(!displayDate) return '';
+    const parts = displayDate.split('/');
+    if(parts.length !== 3) return displayDate;
+    return `${parts[2]}-${parts[1]}-${parts[0]}`;
+}
+
+function setupEventListeners() {
+    const form = document.getElementById('createActivityForm');
+    if(form) {
+        form.addEventListener('submit', handleSave);
+    }
+}
+
+function injectTableStyles() {
+    const style = document.createElement('style');
+    style.innerHTML = `
+        /* ตกแต่งตารางหลัก */
+        .attendance-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            margin-bottom: 20px;
+            background-color: #fff;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1); /* เงา */
+            border-radius: 8px; /* มุมโค้ง */
+            overflow: hidden;
+        }
+
+        /* หัวตาราง */
+        .attendance-table th {
+            background-color: #4a90e2; /* สีฟ้าหัวตาราง */
+            color: white;
+            padding: 12px;
+            text-align: center;
+            font-weight: bold;
+            border-bottom: 2px solid #357abd;
+        }
+
+        /* ช่องข้อมูล */
+        .attendance-table td {
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+            color: #333;
+        }
+
+        /* สลับสีบรรทัด (Zebra Striping) */
+        .attendance-table tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        .attendance-table tr:hover {
+            background-color: #f1f7ff; /* สีตอนเอาเมาส์ชี้ */
+        }
+
+        /* Checkbox เช็คชื่อ */
+        .status-checkbox {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+            vertical-align: middle;
+        }
+
+        /* สีปุ่มเช็คชื่อ (Accent Color) - ใช้ได้กับ Chrome/Edge/Firefox ใหม่ๆ */
+        .status-checkbox.present {
+            accent-color: #28a745; /* สีเขียว */
+        }
+        .status-checkbox.absent {
+            accent-color: #dc3545; /* สีแดง */
+        }
+
+        /* Responsive บนมือถือ (ปรับแต่งเพิ่มเติมจากที่มี) */
+        @media screen and (max-width: 768px) {
+            .attendance-table {
+                display: block;
+                overflow-x: auto;
+                white-space: nowrap;
+            }
+        }
+    `;
+    document.head.appendChild(style);
+    console.log('Injecting Custom Table Styles...');
+}

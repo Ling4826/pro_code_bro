@@ -1,32 +1,31 @@
-/* auth_guard.js - เช็ค Session แบบกำหนดเอง (สำหรับวิธีไม่ใช้ Auth) */
+/* auth_guard.js */
 
-function checkAuth() {
-    // เช็คว่ามีตราประทับ 'is_logged_in' ในเครื่องไหม
+(function() {
+    // 1. ตรวจสอบสถานะ Login จาก SessionStorage
     const isLoggedIn = sessionStorage.getItem('is_logged_in');
+    
+    // หน้าปัจจุบัน
+    const currentPage = window.location.pathname;
+    
+    // ถ้ายังไม่ Login และไม่ได้อยู่ที่หน้า index.html (หน้า Login)
+    if (isLoggedIn !== 'true' && !currentPage.includes('index.html')) {
+        alert('กรุณาเข้าสู่ระบบก่อนใช้งาน');
+        // ถอยกลับไปหน้า Login (ปรับ path ตาม structure จริงของคุณ)
+        window.location.href = '../index.html'; 
+    }
+})();
 
-    // ถ้าไม่มี -> ดีดกลับไปหน้า Login
-    if (isLoggedIn !== 'true') {
-        // เช็คว่าถ้าไม่ได้อยู่หน้า Login ให้เด้งออก
-        if (!window.location.href.includes('index.html')) {
-             alert('กรุณาเข้าสู่ระบบก่อนใช้งาน');
-             window.location.href = '../index.html'; 
-        }
+// ฟังก์ชัน Logout
+function logout() {
+    if(confirm('คุณต้องการออกจากระบบใช่หรือไม่?')) {
+        sessionStorage.clear();
+        window.location.href = '../index.html';
     }
 }
 
-// สั่งทำงานทันที
-checkAuth();
-
-// ฟังก์ชัน Logout (ล้างค่าทั้งหมด)
-function logout() {
-    sessionStorage.clear(); // ลบความจำเครื่อง
-    window.location.href = '../index.html';
-}
-
-// ผูกปุ่ม Logout อัตโนมัติ
+// ผูกปุ่ม Logout อัตโนมัติ (ถ้ามีในหน้าเว็บ)
 document.addEventListener('DOMContentLoaded', () => {
-    const logoutLinks = document.querySelectorAll('.logout');
-    logoutLinks.forEach(btn => {
+    document.querySelectorAll('.logout, #logoutBtn').forEach(btn => {
         btn.addEventListener('click', (e) => {
             e.preventDefault();
             logout();

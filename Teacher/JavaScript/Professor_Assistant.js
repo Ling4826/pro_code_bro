@@ -1,319 +1,38 @@
-// เปลี่ยน YOUR_SUPABASE_URL และ YOUR_SUPABASE_ANON_KEY ด้วยค่าจริงของคุณ
-const SUPABASE_URL = 'https://pdqzkejlefozxquptoco.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBkcXprZWpsZWZvenhxdXB0b2NvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIzNDIyODAsImV4cCI6MjA3NzkxODI4MH0.EojnxNcGPj7eGlf7FAJOgMuEXIW54I2NQwB_L2Wj9DU'; // Key ของคุณ
-// สร้าง Supabase Client
-const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+// Professor_Assistant.js
+
+const CONFIG = {
+    API_URL: 'PHP/api_manage_students.php'
+};
 
 let departmentSelect;
 let levelSelect;
-let dataTableBody;
 let studentYearSelect; 
 let classNumberSelect; 
+let dataTableBody;
+
 let allMajors = []; 
 let allClasses = []; 
-let selectedMajorId = null;
 
-async function populateFilters() {
-    console.log('Fetching initial data for filters...');
-    
-    // 1. ดึงข้อมูล Majors
-    const { data: majors, error: majorError } = await supabaseClient
-        .from('major')
-        .select('id, name, level');
-    if (majorError) { console.error('Error fetching majors:', majorError.message); return; }
-    allMajors = majors; 
-
-    // 2. ดึงข้อมูล Classes ทั้งหมด
-    const { data: classes, error: classError } = await supabaseClient
-        .from('class')
-        .select('major_id, year, class_number');
-    if (classError) { console.error('Error fetching classes:', classError.message); return; }
-    allClasses = classes;
-
-   // A. Populate ระดับ (Level) Filter
-    const uniqueLevels = [...new Set(majors.map(m => m.level?.trim()).filter(Boolean))];
-
-    levelSelect.innerHTML = '<option value="">เลือกระดับ</option>';
-
-    uniqueLevels.forEach(level => {
-        const option = document.createElement('option');
-        option.value = level;
-        option.textContent = level;
-        levelSelect.appendChild(option);
-    });
-
-    // B. ล้าง Major/Year/Class Number Filter
-    departmentSelect.innerHTML = '<option value="">เลือกสาขา</option>';
-    studentYearSelect.innerHTML = '<option value="">เลือกชั้นปี</option>';
-    classNumberSelect.innerHTML = '<option value="">เลือกห้อง</option>';
-}
-
-/** ฟังก์ชันจัดการเมื่อ Level ถูกเปลี่ยน */
-function handleLevelChange() {
-    updateMajorFilter();
-    updateYearFilter(); 
-    updateClassNumberFilter(); 
-    fetchAndRenderStudents();
-}
-
-/** ฟังก์ชันจัดการเมื่อ Major ถูกเปลี่ยน */
-function handleMajorChange() {
-    const selectedLevel = levelSelect.value;
-    const selectedMajorName = departmentSelect.value;
-
-    const major = allMajors.find(m => m.name === selectedMajorName && m.level?.trim().replace('.', '') === selectedLevel.trim().replace('.', '')
-);
-    selectedMajorId = major ? major.id : null;
-
-    updateClassNumberFilter();
-    fetchAndRenderStudents();
-}
-
-/** 1. กรองตัวเลือกชั้นปี (Year) ตามระดับที่เลือก */
-function updateYearFilter() {
-    const selectedLevel = levelSelect.value;
-    const previousYear = studentYearSelect.value; 
-    studentYearSelect.innerHTML = '<option value="">เลือกชั้นปี</option>';
-
-    if (!selectedLevel || !allMajors.length || !allClasses.length) {
-        return; 
-    }
-
-    const majorIds = allMajors
-        .filter(m => m.level.trim() === selectedLevel.trim())
-        .map(m => m.id);
-
-    // ดึงปีที่ไม่ซ้ำกันที่เกี่ยวข้องกับระดับที่เลือก
-    const uniqueYears = [...new Set(
-        allClasses
-            .filter(c => majorIds.includes(c.major_id))
-            .map(c => c.year)
-    )].sort((a, b) => a - b); 
-
-    uniqueYears.forEach(year => {
-        const option = document.createElement('option');
-        option.value = year;
-        option.textContent = `ปี ${year}`;
-        if (year.toString() === previousYear) {
-            option.selected = true;
-        }
-        studentYearSelect.appendChild(option);
-    });
-}
-
-/** 2. กรองตัวเลือกสาขา (Major) ตามระดับ */
-function updateMajorFilter() {
-    const selectedLevel = levelSelect.value;
-    const previousMajor = departmentSelect.value;
-    
-    departmentSelect.innerHTML = '<option value="">เลือกสาขา</option>';
-
-    if (selectedLevel) {
-        // กรอง Majors ที่ Level ตรงกับที่เลือก
-        const filteredMajors = allMajors.filter(m => 
-            // ตรวจสอบทั้งค่า null/undefined และใช้ .trim()
-            m.level && m.level.trim() === selectedLevel.trim()
-        );
-        
-        // ถ้า filteredMajors เป็น 0 จะไม่แสดงอะไรเลย
-        if (filteredMajors.length === 0) {
-            console.warn(`No majors found for level: ${selectedLevel.trim()}`);
-            return;
-        }
-
-        const uniqueMajorNames = [...new Set(filteredMajors.map(m => m.name))];
-
-        uniqueMajorNames.forEach(name => {
-            const option = document.createElement('option');
-            option.value = name;
-            option.textContent = name;
-            if (name === previousMajor) {
-                option.selected = true;
-            }
-            departmentSelect.appendChild(option);
-        });
-    }
-}
-
-/** 3. กรองตัวเลือกห้อง (Class Number) */
-function updateClassNumberFilter() {
-    const selectedYear = studentYearSelect.value;
-    const selectedMajorName = departmentSelect.value;
-    const selectedLevel = levelSelect.value;
-
-    classNumberSelect.innerHTML = '<option value="">เลือกห้อง</option>';
-
-    const major = allMajors.find(m => m.name === selectedMajorName && m.level.trim() === selectedLevel.trim());
-    const targetMajorId = major ? major.id : null;
-
-    if (targetMajorId && selectedYear) {
-        const filteredClasses = allClasses.filter(c => 
-            c.major_id === targetMajorId && 
-            c.year.toString() === selectedYear
-        );
-
-        const uniqueClassNumbers = [...new Set(filteredClasses.map(c => c.class_number))]
-            .sort((a, b) => a - b); 
-
-        uniqueClassNumbers.forEach(number => {
-            const option = document.createElement('option');
-            option.value = number;
-            option.textContent = `ห้อง ${number}`;
-            classNumberSelect.appendChild(option);
-        });
-    }
-
-
-}
-
-
-async function fetchAndRenderStudents() {
-    const selectedMajorName = departmentSelect.value;
-    const selectedLevel = levelSelect.value;
-    const selectedYear = studentYearSelect.value; 
-    const selectedClassNumber = classNumberSelect.value; 
-
-    // ใช้ชื่อ Foreign Key 'class_id' และ 'major_id' ในการ Join
-    let classSelectString = `class_id!inner( 
-        year, 
-        class_number, 
-        major_id!inner (name, level) 
-    )`; 
-    
-    let query = supabaseClient
-        .from('student')
-        .select(`id, name, role, ${classSelectString}`);
-
-    // กรองตามเงื่อนไข
-    if (selectedMajorName) {
-        query = query.eq('class_id.major_id.name', selectedMajorName); 
-    }
-    if (selectedLevel) {
-        query = query.like('class_id.major_id.level', selectedLevel.trim().replace('.', '') + '%');
-
-
-    }
-    if (selectedYear) {
-        query = query.eq('class_id.year', parseInt(selectedYear));
-    }
-    if (selectedClassNumber) {
-        query = query.eq('class_id.class_number', parseInt(selectedClassNumber));
-    }
-
-    const { data: students, error } = await query.order('id', { ascending: true }); 
-
-    if (error) {
-        console.error('Error fetching student data:', error.message);
-        dataTableBody.innerHTML = `<tr><td colspan="6">เกิดข้อผิดพลาดในการโหลดข้อมูล: ${error.message}</td></tr>`; 
-        return;
-    }
-
-    // Render Data
-    dataTableBody.innerHTML = ''; 
-
-    if (students.length === 0) {
-        dataTableBody.innerHTML = '<tr><td colspan="6">ไม่พบข้อมูลนักเรียนตามเงื่อนไขที่เลือก</td></tr>'; 
-        return;
-    }
-
-    const roleMap = { 'Student': 'นักเรียน', 'Leader': 'ผู้ช่วยอาจารย์' };
-    const availableRoles = ['Student', 'Leader'];
-
-    students.forEach(student => {
-        const classData = student.class_id; 
-        
-        // ตรวจสอบความสมบูรณ์ของข้อมูลก่อน Render
-        if (!classData || !classData.major_id) { 
-            console.warn(`Student ID ${student.id} has incomplete class or major data and was skipped.`);
-            return;
-        }
-
-        const majorData = classData.major_id; 
-        const row = dataTableBody.insertRow();
-        
-        // 1. ชื่อ
-        row.insertCell().textContent = student.name;
-        // 2. ระดับ
-        row.insertCell().textContent = majorData.level; 
-        // 3. ชั้นปี 
-        row.insertCell().textContent = classData.year;
-        // 4. ห้อง 
-        row.insertCell().textContent = classData.class_number; 
-        // 5. รหัสนักศึกษา
-        row.insertCell().textContent = student.id; 
-
-        // 6. บทบาท (Role Select Dropdown)
-        const roleCell = row.insertCell();
-        const roleSelect = document.createElement('select');
-        roleSelect.className = 'role-select';
-        roleSelect.dataset.studentId = student.id; 
-
-        availableRoles.forEach(roleKey => {
-            const option = document.createElement('option');
-            option.value = roleKey;
-            option.textContent = roleMap[roleKey] || roleKey; 
-            if (roleKey === student.role) {
-                option.selected = true;
-            }
-            roleSelect.appendChild(option);
-        });
-
-        roleSelect.addEventListener('change', handleRoleUpdate);
-        roleCell.appendChild(roleSelect);
-    });
-
-    console.log(`Students loaded successfully: ${students.length} items`);
-}
-
-/** ฟังก์ชันจัดการเมื่อมีการเปลี่ยนบทบาท (Role) */
-async function handleRoleUpdate(event) {
-    const selectElement = event.target;
-    const studentId = selectElement.dataset.studentId;
-    const newRole = selectElement.value;
-
-    if (!confirm(`แน่ใจที่จะเปลี่ยนบทบาทของรหัส ${studentId} เป็น ${selectElement.options[selectElement.selectedIndex].textContent} หรือไม่?`)) {
-        await fetchAndRenderStudents(); 
-        return;
-    }
-try {
-        const { error: studentUpdateError } = await supabaseClient
-            .from('student')
-            .update({ role: newRole })
-            .eq('id', studentId);
-
-       if (studentUpdateError) {
-            console.error('Error updating student role:', studentUpdateError.message);
-            if (studentUpdateError.message.includes('Cannot have more than 2 Leaders per class')) {
-                alert(`ไม่สามารถอัปเดตบทบาทได้: ห้องเรียนนี้เต็มโควต้าหัวหน้า (จำกัด 2 คน)`);
-            } else {
-                alert(`ไม่สามารถอัปเดตบทบาทได้: ${studentUpdateError.message}`);
-            }
-            await fetchAndRenderStudents();
-            return;
-        }
-        alert(`อัปเดตบทบาทของรหัส ${studentId} สำเร็จเป็น ${selectElement.options[selectElement.selectedIndex].textContent}`);
-    } catch (e) {
-        console.error('Update Error:', e);
-        alert('เกิดข้อผิดพลาดในการอัปเดตข้อมูล');
-    }
-}
-
-
+// ==========================================
+// 1. INIT & LOAD FILTER DATA
+// ==========================================
 document.addEventListener('DOMContentLoaded', () => {
+    // 1. Get DOM Elements
     departmentSelect = document.getElementById('department');
     levelSelect = document.getElementById('level');
     studentYearSelect = document.getElementById('studentYear'); 
     classNumberSelect = document.getElementById('classNumber'); 
     dataTableBody = document.querySelector('.data-table tbody');
 
-    if (!departmentSelect || !levelSelect || !studentYearSelect || !classNumberSelect || !dataTableBody) { 
-        console.error("Critical Error: One or more required DOM elements were not found.");
-        return; 
+    if (!departmentSelect || !levelSelect || !dataTableBody) {
+        console.error("Required elements not found");
+        return;
     }
 
+    // 2. Load Filters
     populateFilters();
-    fetchAndRenderStudents(); 
 
+    // 3. Attach Events
     levelSelect.addEventListener('change', handleLevelChange);
     departmentSelect.addEventListener('change', handleMajorChange);
     studentYearSelect.addEventListener('change', () => {
@@ -321,4 +40,207 @@ document.addEventListener('DOMContentLoaded', () => {
         fetchAndRenderStudents();
     });
     classNumberSelect.addEventListener('change', fetchAndRenderStudents);
+
+    // 4. Initial Load
+    fetchAndRenderStudents(); 
 });
+
+async function populateFilters() {
+    try {
+        // A. Load Majors
+        const resMajors = await fetch(`${CONFIG.API_URL}?action=get_majors`);
+        const dataMajors = await resMajors.json();
+        if(dataMajors.status === 'success') allMajors = dataMajors.data;
+
+        // B. Load Classes
+        const resClasses = await fetch(`${CONFIG.API_URL}?action=get_classes`);
+        const dataClasses = await resClasses.json();
+        if(dataClasses.status === 'success') allClasses = dataClasses.data;
+
+        // C. Populate Level Dropdown
+        const uniqueLevels = [...new Set(allMajors.map(m => m.level))];
+        levelSelect.innerHTML = '<option value="">เลือกระดับ</option>';
+        uniqueLevels.forEach(level => {
+            levelSelect.innerHTML += `<option value="${level}">${level}</option>`;
+        });
+
+    } catch (err) {
+        console.error('Filter loading error:', err);
+    }
+}
+
+// ==========================================
+// 2. FILTER LOGIC
+// ==========================================
+function handleLevelChange() {
+    updateMajorDropdown();
+    updateYearDropdown(); 
+    updateClassNumberFilter(); 
+    fetchAndRenderStudents();
+}
+
+function handleMajorChange() {
+    updateClassNumberFilter();
+    fetchAndRenderStudents();
+}
+
+function updateMajorDropdown() {
+    const selectedLevel = levelSelect.value;
+    departmentSelect.innerHTML = '<option value="">เลือกสาขา</option>';
+    
+    if(!selectedLevel) return;
+
+    const filteredMajors = allMajors.filter(m => m.level === selectedLevel);
+    // ใช้ Set เพื่อกรองชื่อซ้ำ (ถ้ามี)
+    const uniqueNames = [...new Set(filteredMajors.map(m => m.name))];
+    
+    uniqueNames.forEach(name => {
+        departmentSelect.innerHTML += `<option value="${name}">${name}</option>`;
+    });
+}
+
+function updateYearDropdown() {
+    const selectedLevel = levelSelect.value;
+    studentYearSelect.innerHTML = '<option value="">เลือกชั้นปี</option>';
+
+    if (!selectedLevel) return;
+
+    // Logic ง่ายๆ ตามระดับ (หรือจะกรองจาก allClasses ก็ได้)
+    let years = [];
+    if (selectedLevel === 'ปวช.') years = [1, 2, 3];
+    else if (selectedLevel === 'ปวส.') years = [1, 2];
+
+    years.forEach(y => {
+        studentYearSelect.innerHTML += `<option value="${y}">ปี ${y}</option>`;
+    });
+}
+
+function updateClassNumberFilter() {
+    const selectedYear = studentYearSelect.value;
+    const selectedMajorName = departmentSelect.value;
+    const selectedLevel = levelSelect.value;
+
+    classNumberSelect.innerHTML = '<option value="">เลือกห้อง</option>';
+
+    if (!selectedLevel || !selectedMajorName || !selectedYear) return;
+
+    // หา major_id จาก name & level
+    const targetMajors = allMajors.filter(m => m.name === selectedMajorName && m.level === selectedLevel);
+    const targetMajorIds = targetMajors.map(m => m.id);
+
+    // กรอง Classes
+    const filteredClasses = allClasses.filter(c => 
+        targetMajorIds.includes(c.major_id) && 
+        c.year == selectedYear
+    );
+
+    const uniqueClassNums = [...new Set(filteredClasses.map(c => c.class_number))].sort((a,b) => a-b);
+
+    uniqueClassNums.forEach(num => {
+        classNumberSelect.innerHTML += `<option value="${num}">ห้อง ${num}</option>`;
+    });
+}
+
+// ==========================================
+// 3. FETCH & RENDER STUDENTS
+// ==========================================
+async function fetchAndRenderStudents() {
+    dataTableBody.innerHTML = '<tr><td colspan="6" style="text-align:center;">กำลังโหลดข้อมูล...</td></tr>';
+
+    const params = new URLSearchParams({
+        action: 'get_students',
+        majorName: departmentSelect.value,
+        level: levelSelect.value,
+        year: studentYearSelect.value,
+        classNumber: classNumberSelect.value
+    });
+
+    try {
+        const res = await fetch(`${CONFIG.API_URL}?${params}`);
+        const result = await res.json();
+
+        dataTableBody.innerHTML = '';
+
+        if (result.status !== 'success' || result.data.length === 0) {
+            dataTableBody.innerHTML = '<tr><td colspan="6" style="text-align:center;">ไม่พบข้อมูลนักเรียน</td></tr>';
+            return;
+        }
+
+        const roleMap = { 'Student': 'นักเรียน', 'Leader': 'ผู้ช่วยอาจารย์' };
+
+        result.data.forEach(student => {
+            const row = dataTableBody.insertRow();
+            
+            row.insertCell().textContent = student.name;
+            row.insertCell().textContent = student.major_level;
+            row.insertCell().textContent = student.year;
+            row.insertCell().textContent = student.class_number;
+            row.insertCell().textContent = student.id;
+
+            // Role Select
+            const roleCell = row.insertCell();
+            const select = document.createElement('select');
+            select.className = 'role-select'; // ใส่ class ไว้แต่ง CSS
+            select.dataset.studentId = student.id;
+            select.dataset.originalRole = student.role; // เก็บค่าเดิมไว้กันพลาด
+
+            ['Student', 'Leader'].forEach(roleKey => {
+                const opt = document.createElement('option');
+                opt.value = roleKey;
+                opt.textContent = roleMap[roleKey];
+                if (student.role === roleKey) opt.selected = true;
+                select.appendChild(opt);
+            });
+
+            select.addEventListener('change', handleRoleUpdate);
+            roleCell.appendChild(select);
+        });
+
+    } catch (err) {
+        console.error('Fetch students error:', err);
+        dataTableBody.innerHTML = `<tr><td colspan="6" style="color:red;">เกิดข้อผิดพลาด: ${err.message}</td></tr>`;
+    }
+}
+
+// ==========================================
+// 4. UPDATE ROLE (LOGIC)
+// ==========================================
+async function handleRoleUpdate(event) {
+    const select = event.target;
+    const studentId = select.dataset.studentId;
+    const newRole = select.value;
+    const originalRole = select.dataset.originalRole;
+    const roleText = select.options[select.selectedIndex].text;
+
+    const confirmMsg = `ยืนยันการเปลี่ยนบทบาทของรหัส ${studentId}\nเป็น "${roleText}" หรือไม่?`;
+    
+    if (!confirm(confirmMsg)) {
+        select.value = originalRole; // คืนค่าเดิมถ้ากด ยกเลิก
+        return;
+    }
+
+    try {
+        const res = await fetch(`${CONFIG.API_URL}?action=update_role`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                studentId: studentId,
+                role: newRole
+            })
+        });
+
+        const result = await res.json();
+
+        if (result.status === 'success') {
+            alert(`✅ ${result.message}`);
+            select.dataset.originalRole = newRole; // อัปเดตค่าเดิมเป็นค่าใหม่
+            // อาจจะโหลดตารางใหม่เพื่อความชัวร์ หรือปล่อยไว้ก็ได้
+        } else {
+            throw new Error(result.message);
+        }
+
+    } catch (err) {
+        alert(`❌ ไม่สามารถอัปเดตได้: ${err.message}`);
+        select.value = originalRole; // ดีดกลับค่าเดิม
+    }
+}
