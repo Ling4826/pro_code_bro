@@ -81,10 +81,13 @@ function createActivity($pdo) {
     $pdo->beginTransaction();
 
     try {
-        // --- แก้ไขจุดที่ 1: ลบ created_by ออกจาก SQL ---
+        // 1. สร้าง ID ขึ้นมาเอง (เพราะ Database เป็น VARCHAR ไม่ใช่ Auto Increment)
+        $newActivityId = uniqid(); // สร้าง ID แบบสุ่มที่ไม่ซ้ำ
+
+        // 2. เพิ่มคอลัมน์ id เข้าไปในคำสั่ง SQL
         $sql = "INSERT INTO activity 
-                (name, activity_type, start_time, end_time, class_id, is_recurring) 
-                VALUES (:name, :type, :start, :end, :class_id, :recurring)";
+                (id, name, activity_type, start_time, end_time, class_id, is_recurring) 
+                VALUES (:id, :name, :type, :start, :end, :class_id, :recurring)";
         
         $stmt = $pdo->prepare($sql);
         
@@ -92,28 +95,28 @@ function createActivity($pdo) {
         $startTime = "{$date} {$input['startTime']}:00";
         $endTime   = "{$date} {$input['endTime']}:00";
         
-        // รับค่า classId (ถ้าไม่มีให้เป็น NULL)
         $classId = !empty($input['classId']) ? $input['classId'] : null;
 
         $stmt->execute([
+            ':id'         => $newActivityId, // ส่ง ID ที่เราสร้างเองเข้าไป
             ':name'       => $input['activityName'],
             ':type'       => $input['activityType'],
             ':start'      => $startTime,
             ':end'        => $endTime,
             ':class_id'   => $classId, 
             ':recurring'  => !empty($input['recurringDays']) ? 1 : 0
-            // ลบ ':created_by' ออกไปแล้ว
         ]);
 
-        $activityId = $pdo->lastInsertId();
+        // ไม่ต้องใช้ $pdo->lastInsertId() แล้ว ให้ใช้ตัวแปรที่เราสร้างไว้แทน
+        $activityId = $newActivityId;
+
+        // --- ส่วนด้านล่างนี้เหมือนเดิม ---
 
         // 2. ดึงนักเรียน
         if ($classId) {
-            // กรณีระบุห้อง
             $stmtUsers = $pdo->prepare("SELECT id FROM student WHERE class_id = ?");
             $stmtUsers->execute([$classId]);
         } else {
-            // *** กรณีไม่ระบุห้อง (เหมารวมทั้งวิทยาลัย) ***
             $stmtUsers = $pdo->prepare("SELECT id FROM student");
             $stmtUsers->execute();
         }
@@ -124,16 +127,20 @@ function createActivity($pdo) {
             throw new Exception("ไม่พบรายชื่อนักเรียนในระบบ");
         }
 
-        // 3. สร้าง Activity Check (Bulk Insert)
-        $sqlCheck = "INSERT INTO activity_check (activity_id, student_id, status, date, semester, academic_year) 
-                     VALUES (?, ?, NULL, ?, ?, ?)";
+        // 3. สร้าง Activity Check
+        $sqlCheck = "INSERT INTO activity_check (id, activity_id, student_id, status, date, semester, academic_year) 
+                     VALUES (?, ?, ?, NULL, ?, ?, ?)";
         $stmtCheck = $pdo->prepare($sqlCheck);
         
         $academicYear = $input['academicYear'] ?? (date('Y') + 543);
 
         foreach ($students as $studentId) {
+            // ต้องสร้าง ID สำหรับ activity_check ด้วยเช่นกัน (เพราะใน SQL เป็น VARCHAR)
+            $checkId = uniqid('chk_'); 
+
             $stmtCheck->execute([
-                $activityId,
+                $checkId,      // id ของ activity_check
+                $activityId,   // activity_id ที่ถูกต้อง
                 $studentId,
                 $date,
                 $input['semester'],
