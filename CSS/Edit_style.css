@@ -223,7 +223,7 @@ body {
 .function-block.red { background-color: #d9534f; }    /* แก้ไข / ลบกิจกรรม */
 .function-block.green { background-color: #5cb85c; }  /* ตรวจสอบกิจกรรม - สีเขียว */
 .function-block.orange { background-color: #f0ad4e; } /* ข้อมูลสาขา */
-.function-block.purple { background-color: #673ab7; } /* สรุปผลเทอม */
+.function-block.purple { background-color: #673ab7; } /* สรุปผลกิจกรรม */
 
 
 /* *** START: CSS สำหรับหน้าตาราง (สรุปผลและข้อมูลสาขา) ***
